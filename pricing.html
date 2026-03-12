@@ -644,8 +644,11 @@ async function confirmCheckout() {
     enterprise: 'https://buy.stripe.com/test_9B63cobJ5dPc7nn6Zi8IU02',
   };
 
+  const successUrl = encodeURIComponent(
+    window.location.origin + `/dashboard.html?paid=${selectedPlanKey}&t=${Date.now()}`
+  );
   closeModal();
-  window.location.href = PAYMENT_LINKS[selectedPlanKey];
+  window.location.href = PAYMENT_LINKS[selectedPlanKey] + `?success_url=${successUrl}`;
 }
 
 // ── FAQ ──

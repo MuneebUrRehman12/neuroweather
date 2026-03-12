@@ -268,6 +268,8 @@ body{background:var(--ink);color:var(--text);font-family:'DM Sans',sans-serif;
   text-decoration:none;white-space:nowrap;transition:transform 0.2s}
 .upgrade-btn:hover{transform:scale(1.04)}
 
+@keyframes fadeInDown{from{opacity:0;transform:translateX(-50%) translateY(-12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
 /* ── MOBILE BOTTOM NAV ── */
 .mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:300;
   background:rgba(7,16,31,0.97);border-top:1px solid rgba(255,255,255,0.07);
@@ -674,8 +676,48 @@ let teamSessions  = [];
     plan_expires_at: null
   };
 
+  // ── Check if returning from Stripe payment ──
+  const params = new URLSearchParams(window.location.search);
+  const paidPlan = params.get('paid');
+  if (paidPlan && ['individual','team','enterprise'].includes(paidPlan)) {
+    await activatePlan(currentUser.id, paidPlan);
+    // Reload profile with new plan
+    const { data: freshProfile } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+    if (freshProfile) userProfile = freshProfile;
+    // Clean URL
+    window.history.replaceState({}, '', 'dashboard.html');
+    showPaidToast(paidPlan);
+  }
+
   bootApp();
 })();
+
+// Activate plan in Supabase after payment
+async function activatePlan(userId, plan) {
+  const expiresAt = new Date();
+  expiresAt.setMonth(expiresAt.getMonth() + 1);
+  const role = plan === 'individual' ? 'user' : 'leader';
+  await sb.from('profiles').update({
+    plan: plan,
+    role: role,
+    plan_expires_at: expiresAt.toISOString()
+  }).eq('id', userId);
+}
+
+function showPaidToast(plan) {
+  const labels = { individual: 'Individual', team: 'Team', enterprise: 'Enterprise' };
+  const emojis = { individual: '⭐', team: '🚀', enterprise: '💎' };
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;top:1.2rem;left:50%;transform:translateX(-50%);
+    background:linear-gradient(135deg,#1e6bff,#00c6e0);color:#fff;
+    padding:0.85rem 1.8rem;border-radius:50px;font-size:0.88rem;font-weight:600;
+    z-index:9999;box-shadow:0 8px 32px rgba(30,107,255,0.4);
+    animation:fadeInDown 0.4s ease;white-space:nowrap`;
+  t.textContent = `${emojis[plan]} ${labels[plan]} Plan activated! Welcome to NeuroWeather Pro.`;
+  document.body.appendChild(t);
+  setTimeout(() => t.style.opacity = '0', 4000);
+  setTimeout(() => t.remove(), 4500);
+}
 
 function bootDemo() {
   userProfile = { full_name:'Demo User', role:'user', plan:'demo' };
