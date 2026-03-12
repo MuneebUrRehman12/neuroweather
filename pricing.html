@@ -637,56 +637,15 @@ async function confirmCheckout() {
   document.getElementById('modalConfirm').textContent = 'Redirecting...';
   document.getElementById('modalConfirm').disabled = true;
 
-  // Check if user is logged in
-  const { data: { session } } = await sb.auth.getSession();
+  // Payment Links — direct Stripe hosted checkout, no backend needed
+  const PAYMENT_LINKS = {
+    individual: 'https://buy.stripe.com/test_4gM14g28v12q6jj2J28IU00',
+    team:       'https://buy.stripe.com/test_14A7sE28vh1o5ffcjC8IU01',
+    enterprise: 'https://buy.stripe.com/test_9B63cobJ5dPc7nn6Zi8IU02',
+  };
 
-  if (!session) {
-    // Not logged in → go create account first
-    closeModal();
-    window.location.href = `login.html?plan=${selectedPlanKey}`;
-    return;
-  }
-
-  // ── Check if Stripe is configured ──
-  const stripeConfigured =
-    STRIPE_KEY &&
-    !STRIPE_KEY.includes('YOUR') &&
-    STRIPE_KEY.startsWith('pk_') &&
-    STRIPE_PRICES[selectedPlanKey] &&
-    !STRIPE_PRICES[selectedPlanKey].includes('test_id') &&
-    STRIPE_PRICES[selectedPlanKey].startsWith('price_');
-
-  if (!stripeConfigured) {
-    // Stripe not configured yet — demo mode: go straight to dashboard
-    closeModal();
-    const planLabel = selectedPlanKey.charAt(0).toUpperCase() + selectedPlanKey.slice(1);
-    showToast(`✅ ${planLabel} plan activated! (Demo mode — add Stripe keys to config.js for real payments)`);
-    setTimeout(() => {
-      window.location.href = `dashboard.html?view=${selectedPlanKey === 'individual' ? 'user' : 'leader'}&plan=${selectedPlanKey}`;
-    }, 1800);
-    return;
-  }
-
-  // ── Real Stripe checkout ──
-  try {
-    const stripe = Stripe(STRIPE_KEY);
-    const { error } = await stripe.redirectToCheckout({
-      lineItems: [{ price: STRIPE_PRICES[selectedPlanKey], quantity: 1 }],
-      mode: 'subscription',
-      successUrl: window.location.origin + `/dashboard.html?plan=${selectedPlanKey}&success=1`,
-      cancelUrl:  window.location.origin + '/pricing.html',
-      customerEmail: session?.user?.email,
-    });
-    if (error) {
-      showToast('❌ ' + error.message);
-      document.getElementById('modalConfirm').textContent = 'Continue to Payment →';
-      document.getElementById('modalConfirm').disabled = false;
-    }
-  } catch(e) {
-    showToast('❌ Stripe error: ' + (e.message || 'Please check your Stripe key in config.js'));
-    document.getElementById('modalConfirm').textContent = 'Continue to Payment →';
-    document.getElementById('modalConfirm').disabled = false;
-  }
+  closeModal();
+  window.location.href = PAYMENT_LINKS[selectedPlanKey];
 }
 
 // ── FAQ ──
