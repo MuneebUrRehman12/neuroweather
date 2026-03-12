@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NeuroWeather — Cognitive Intelligence Platform</title>
+<meta name="description" content="The world's first cognitive weather forecast. AI that predicts your team's focus, stress, and mental readiness — automatically.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌤️</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink:#07101f; --navy:#0d1f3c; --blue:#1e6bff; --cyan:#00c6e0;
+  --green:#10b981; --gold:#f0b429; --storm:#e84c4c; --purple:#8b5cf6;
+  --fog:#8ea8c3; --text:#c9ddf0; --white:#fff;
+  --border:rgba(255,255,255,0.07); --card:rgba(13,31,60,0.8);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--ink);color:var(--text);font-family:'DM Sans',sans-serif;font-weight:300;overflow-x:hidden}
+
+/* ── ATMOSPHERE ── */
+.atmo{position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(ellipse 80% 60% at 15% 10%,rgba(30,107,255,0.08),transparent 60%),
+    radial-gradient(ellipse 60% 50% at 85% 80%,rgba(0,198,224,0.05),transparent 60%),
+    radial-gradient(ellipse 50% 40% at 50% 50%,rgba(139,92,246,0.03),transparent 60%)}
+#starCanvas{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:0.35}
+
+/* ── NAV ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:200;
+  padding:1.1rem 4rem;display:flex;align-items:center;justify-content:space-between;
+  background:rgba(7,16,31,0.82);backdrop-filter:blur(24px);border-bottom:1px solid var(--border);
+  transition:padding 0.3s}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.3rem;
+  color:var(--white);text-decoration:none;display:flex;align-items:center;gap:0.5rem}
+.logo em{color:var(--cyan);font-style:normal}
+.nav-links{display:flex;gap:2.5rem;list-style:none}
+.nav-links a{color:var(--fog);text-decoration:none;font-size:0.8rem;font-weight:500;
+  letter-spacing:0.06em;text-transform:uppercase;transition:color 0.2s}
+.nav-links a:hover{color:var(--cyan)}
+.nav-actions{display:flex;gap:0.8rem;align-items:center}
+.nav-ghost{color:var(--fog);font-size:0.82rem;text-decoration:none;
+  padding:0.42rem 1rem;border-radius:50px;border:1px solid rgba(255,255,255,0.12);
+  transition:border-color 0.2s,color 0.2s}
+.nav-ghost:hover{border-color:var(--cyan);color:var(--cyan)}
+.nav-primary{background:linear-gradient(135deg,var(--blue),var(--cyan));color:#fff;
+  padding:0.48rem 1.25rem;border-radius:50px;font-size:0.82rem;font-weight:500;
+  text-decoration:none;transition:transform 0.2s,box-shadow 0.2s}
+.nav-primary:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(30,107,255,0.35)}
+
+/* ── HERO ── */
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;text-align:center;padding:8rem 2rem 5rem;
+  position:relative;z-index:1}
+
+.hero-badge{display:inline-flex;align-items:center;gap:0.6rem;
+  background:rgba(0,198,224,0.07);border:1px solid rgba(0,198,224,0.25);
+  color:var(--cyan);border-radius:50px;padding:0.42rem 1.1rem;
+  font-size:0.7rem;font-weight:700;letter-spacing:0.2em;text-transform:uppercase;
+  margin-bottom:2.2rem;animation:fadeUp 0.7s ease both}
+.pulse-dot{width:7px;height:7px;border-radius:50%;background:var(--cyan);
+  box-shadow:0 0 8px var(--cyan);animation:pulsate 2s ease infinite}
+@keyframes pulsate{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.7);opacity:0.4}}
+
+h1.hero-h{font-family:'Syne',sans-serif;font-weight:800;
+  font-size:clamp(3.2rem,9vw,8rem);color:var(--white);
+  line-height:0.93;letter-spacing:-0.04em;margin-bottom:0.5rem;
+  animation:fadeUp 0.7s ease 0.1s both}
+h1.hero-h .script{font-family:'Instrument Serif',serif;font-style:italic;
+  font-weight:400;color:var(--cyan);display:block;font-size:1.05em;line-height:1}
+
+.hero-sub{font-size:clamp(1rem,2.2vw,1.25rem);color:var(--fog);
+  max-width:600px;margin:1.8rem auto 3.5rem;line-height:1.85;font-weight:300;
+  animation:fadeUp 0.7s ease 0.2s both}
+.hero-sub strong{color:var(--text);font-weight:500}
+
+.hero-cta{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;
+  animation:fadeUp 0.7s ease 0.3s both;margin-bottom:1rem}
+.btn-hero{background:linear-gradient(135deg,var(--blue),var(--cyan));color:#fff;
+  padding:1rem 2.6rem;border-radius:50px;font-size:0.95rem;font-weight:500;
+  text-decoration:none;transition:transform 0.2s,box-shadow 0.2s;
+  box-shadow:0 10px 36px rgba(30,107,255,0.3)}
+.btn-hero:hover{transform:translateY(-3px);box-shadow:0 18px 52px rgba(30,107,255,0.45)}
+.btn-ghost{background:transparent;border:1px solid rgba(255,255,255,0.16);
+  color:var(--text);padding:1rem 2.6rem;border-radius:50px;font-size:0.95rem;
+  text-decoration:none;transition:border-color 0.2s,color 0.2s}
+.btn-ghost:hover{border-color:var(--cyan);color:var(--cyan)}
+
+.hero-note{font-size:0.75rem;color:var(--fog);animation:fadeUp 0.7s ease 0.4s both}
+.hero-note a{color:var(--cyan);text-decoration:none}
+
+/* ── LIVE WIDGET (hero) ── */
+.hero-widget{margin:4rem auto 0;max-width:800px;width:100%;
+  background:rgba(13,31,60,0.82);border:1px solid rgba(0,198,224,0.18);
+  border-radius:22px;padding:1.8rem 2rem;backdrop-filter:blur(20px);
+  box-shadow:0 40px 80px rgba(0,0,0,0.4);animation:fadeUp 0.7s ease 0.5s both;
+  position:relative;overflow:hidden}
+.hw-shimmer{position:absolute;top:0;left:-100%;width:200%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(0,198,224,0.04),transparent);
+  animation:shimmer 4s ease infinite}
+@keyframes shimmer{0%{left:-100%}100%{left:100%}}
+.hw-header{display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:1.4rem;padding-bottom:0.9rem;border-bottom:1px solid var(--border)}
+.hw-title{font-family:'Syne',sans-serif;font-size:0.68rem;letter-spacing:0.2em;
+  text-transform:uppercase;color:var(--fog);font-weight:600}
+.hw-live{display:flex;align-items:center;gap:0.4rem;font-size:0.65rem;
+  color:var(--cyan);font-weight:600;letter-spacing:0.1em}
+.hw-dot{width:5px;height:5px;border-radius:50%;background:var(--cyan);animation:pulsate 1.5s ease infinite}
+.hw-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:1.2rem}
+.hw-m{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:12px;padding:1.1rem 1.2rem}
+.hw-lbl{font-size:0.58rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--fog);font-weight:600;margin-bottom:0.4rem}
+.hw-val{font-family:'Syne',sans-serif;font-weight:700;font-size:2.2rem;line-height:1;margin-bottom:0.25rem}
+.hw-sub{font-size:0.7rem;color:var(--fog)}
+.hw-bar{height:3px;background:rgba(255,255,255,0.06);border-radius:2px;margin-top:0.6rem;overflow:hidden}
+.hw-fill{height:100%;border-radius:2px;transition:width 1.5s ease}
+
+/* ── STATS ROW ── */
+.stats-row{position:relative;z-index:1;display:grid;grid-template-columns:repeat(4,1fr);
+  border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.s-stat{padding:2.8rem 2rem;text-align:center;border-right:1px solid var(--border)}
+.s-stat:last-child{border-right:none}
+.s-num{font-family:'Syne',sans-serif;font-weight:800;font-size:3rem;
+  color:var(--white);display:block;line-height:1;margin-bottom:0.45rem}
+.s-num em{color:var(--cyan);font-style:normal}
+.s-lbl{font-size:0.76rem;color:var(--fog);line-height:1.5}
+
+/* ── SECTION BASE ── */
+.section{position:relative;z-index:1;padding:8rem 4rem;max-width:1200px;margin:0 auto}
+.sec-tag{font-family:'Syne',sans-serif;font-size:0.63rem;letter-spacing:0.28em;
+  text-transform:uppercase;color:var(--cyan);margin-bottom:1.1rem;
+  display:flex;align-items:center;gap:0.65rem}
+.sec-tag::before{content:'';display:block;width:28px;height:1px;background:var(--cyan)}
+.sec-h{font-family:'Syne',sans-serif;font-size:clamp(2rem,4.5vw,3.4rem);
+  font-weight:700;color:var(--white);line-height:1.1;letter-spacing:-0.02em;margin-bottom:1.3rem}
+.sec-h em{font-family:'Instrument Serif',serif;font-style:italic;color:var(--cyan);font-weight:400}
+.sec-body{color:var(--fog);line-height:1.9;font-size:1rem;max-width:580px}
+.sec-body strong{color:var(--text);font-weight:500}
+
+/* ── PROBLEM ── */
+.problem-grid{display:grid;grid-template-columns:1fr 1fr;gap:6rem;align-items:center}
+.p-quote{background:rgba(240,180,41,0.06);border:1px solid rgba(240,180,41,0.2);
+  border-radius:14px;padding:1.6rem 1.8rem;margin-top:2rem;
+  font-family:'Instrument Serif',serif;font-style:italic;
+  font-size:1.05rem;color:var(--gold);line-height:1.7}
+.p-cards{display:flex;flex-direction:column;gap:0.9rem}
+.p-card{background:var(--card);border:1px solid var(--border);border-radius:13px;
+  padding:1.3rem 1.5rem;display:flex;align-items:flex-start;gap:0.9rem;
+  backdrop-filter:blur(10px);transition:border-color 0.3s,transform 0.3s}
+.p-card:hover{border-color:rgba(30,107,255,0.25);transform:translateX(5px)}
+.p-icon{font-size:1.4rem;flex-shrink:0;margin-top:0.05rem}
+.p-title{font-weight:600;color:var(--text);font-size:0.9rem;margin-bottom:0.18rem}
+.p-body{font-size:0.8rem;color:var(--fog);line-height:1.55}
+
+/* ── AUDIENCE ── */
+.aud-bg{background:rgba(13,31,60,0.35);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.aud-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.3rem;margin-top:3.5rem}
+.aud-card{background:var(--card);border:1px solid var(--border);border-radius:20px;
+  padding:2rem 1.7rem;backdrop-filter:blur(10px);
+  transition:transform 0.3s,box-shadow 0.3s,border-color 0.3s;position:relative;overflow:hidden}
+.aud-card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,var(--blue),var(--cyan));
+  opacity:0;transition:opacity 0.3s}
+.aud-card:hover{transform:translateY(-7px);box-shadow:0 22px 55px rgba(0,0,0,0.28);border-color:rgba(30,107,255,0.18)}
+.aud-card:hover::after{opacity:1}
+.aud-icon{font-size:2.6rem;margin-bottom:1.1rem;display:block}
+.aud-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;color:var(--white);margin-bottom:0.6rem}
+.aud-body{font-size:0.82rem;color:var(--fog);line-height:1.65}
+
+/* ── HOW IT WORKS ── */
+.how-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1.2rem;margin-top:3.5rem}
+.how-card{background:var(--card);border:1px solid var(--border);border-radius:18px;
+  padding:1.8rem 1.5rem;backdrop-filter:blur(10px);position:relative;
+  transition:transform 0.3s,border-color 0.3s}
+.how-card:hover{transform:translateY(-5px);border-color:rgba(0,198,224,0.2)}
+.how-num{font-family:'Syne',sans-serif;font-weight:800;font-size:3.5rem;
+  color:rgba(0,198,224,0.1);line-height:1;margin-bottom:0.8rem}
+.how-icon{font-size:1.8rem;margin-bottom:0.7rem;display:block}
+.how-title{font-family:'Syne',sans-serif;font-weight:700;font-size:0.95rem;
+  color:var(--white);margin-bottom:0.5rem}
+.how-body{font-size:0.8rem;color:var(--fog);line-height:1.6}
+.how-tags{display:flex;flex-wrap:wrap;gap:0.4rem;margin-top:0.9rem}
+.how-tag{background:rgba(0,198,224,0.06);border:1px solid rgba(0,198,224,0.14);
+  color:var(--cyan);border-radius:50px;padding:0.17rem 0.6rem;font-size:0.63rem;font-weight:600}
+
+/* ── METRICS ── */
+.metrics-bg{background:rgba(13,31,60,0.35);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1.1rem;margin-top:3rem}
+.metric-card{background:var(--card);border:1px solid var(--border);border-radius:18px;
+  padding:1.8rem 1.5rem;text-align:center;backdrop-filter:blur(10px);
+  transition:transform 0.3s,border-color 0.3s}
+.metric-card:hover{transform:translateY(-5px);border-color:rgba(0,198,224,0.2)}
+.metric-icon{font-size:2.2rem;display:block;margin-bottom:0.8rem}
+.metric-name{font-family:'Syne',sans-serif;font-weight:700;font-size:0.92rem;
+  color:var(--white);margin-bottom:0.4rem}
+.metric-body{font-size:0.79rem;color:var(--fog);line-height:1.55}
+.metric-val{font-family:'Syne',sans-serif;font-weight:800;font-size:1.8rem;
+  line-height:1;margin-top:0.8rem}
+
+/* ── WHY NOW ── */
+.why-grid{display:grid;grid-template-columns:1fr 1fr;gap:5rem;align-items:start}
+.why-pts{display:flex;flex-direction:column;gap:0.9rem;margin-top:1rem}
+.why-pt{display:flex;align-items:flex-start;gap:0.9rem;
+  padding:1.1rem 1.4rem;background:var(--card);border:1px solid var(--border);
+  border-radius:12px;transition:border-color 0.3s}
+.why-pt:hover{border-color:rgba(30,107,255,0.22)}
+.why-check{color:var(--cyan);font-size:0.9rem;flex-shrink:0;margin-top:0.12rem}
+.why-text{font-size:0.85rem;color:var(--fog);line-height:1.6}
+.why-text strong{color:var(--text);font-weight:500}
+.intersect-box{background:linear-gradient(135deg,rgba(30,107,255,0.08),rgba(0,198,224,0.05));
+  border:1px solid rgba(0,198,224,0.18);border-radius:20px;padding:2.5rem;text-align:center}
+.venn{display:flex;justify-content:center;margin-bottom:1.4rem}
+.vc{width:82px;height:82px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:0.62rem;font-weight:700;text-transform:uppercase;
+  letter-spacing:0.04em;text-align:center;line-height:1.3}
+.vc1{background:rgba(30,107,255,0.2);border:2px solid rgba(30,107,255,0.4);color:var(--blue);margin-right:-22px}
+.vc2{background:rgba(0,198,224,0.2);border:2px solid rgba(0,198,224,0.4);color:var(--cyan);z-index:1}
+.vc3{background:rgba(240,180,41,0.2);border:2px solid rgba(240,180,41,0.4);color:var(--gold);margin-left:-22px}
+.intersect-label{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;color:var(--white);margin-bottom:0.4rem}
+.intersect-sub{font-size:0.8rem;color:var(--fog);line-height:1.6}
+
+/* ── PRICING PREVIEW ── */
+.price-preview{display:grid;grid-template-columns:repeat(3,1fr);gap:1.2rem;margin-top:3.5rem}
+.pp-card{background:var(--card);border:1px solid var(--border);border-radius:20px;
+  padding:2rem 1.7rem;backdrop-filter:blur(10px);text-align:center;
+  transition:transform 0.3s,border-color 0.3s}
+.pp-card:hover{transform:translateY(-5px)}
+.pp-card.popular{border-color:rgba(0,198,224,0.3);transform:translateY(-6px)}
+.pp-icon{font-size:2.2rem;display:block;margin-bottom:1rem}
+.pp-name{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;color:var(--white);margin-bottom:0.3rem}
+.pp-price{font-family:'Syne',sans-serif;font-weight:800;font-size:2.8rem;color:var(--white);
+  line-height:1;margin:0.9rem 0 0.3rem}
+.pp-price span{font-size:1rem;font-weight:400;color:var(--fog)}
+.pp-desc{font-size:0.78rem;color:var(--fog);line-height:1.55;margin-bottom:1.5rem}
+.pp-btn{display:block;padding:0.75rem;border-radius:12px;font-size:0.85rem;font-weight:500;
+  text-decoration:none;transition:transform 0.2s,box-shadow 0.2s;font-family:'DM Sans',sans-serif}
+.pp-btn.primary{background:linear-gradient(135deg,var(--blue),var(--cyan));color:#fff}
+.pp-btn.primary:hover{transform:translateY(-2px);box-shadow:0 10px 28px rgba(30,107,255,0.35)}
+.pp-btn.outline{background:transparent;border:1px solid rgba(255,255,255,0.14);color:var(--text)}
+.pp-btn.outline:hover{border-color:var(--cyan);color:var(--cyan)}
+.popular-tag{display:inline-block;background:linear-gradient(135deg,var(--blue),var(--cyan));
+  color:#fff;border-radius:50px;padding:0.2rem 0.8rem;font-size:0.63rem;
+  font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:0.7rem}
+
+/* ── 2035 CLOSING ── */
+.closing{text-align:center;padding:10rem 2rem;position:relative;z-index:1;overflow:hidden}
+.c-glow{position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse 70% 70% at 50% 50%,rgba(30,107,255,0.07),transparent 70%)}
+.c-2035{font-family:'Syne',sans-serif;font-weight:800;font-size:10rem;
+  color:rgba(255,255,255,0.025);position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);letter-spacing:-0.05em;pointer-events:none;white-space:nowrap;z-index:0}
+.c-label{font-family:'Syne',sans-serif;font-size:0.65rem;letter-spacing:0.3em;
+  text-transform:uppercase;color:var(--fog);margin-bottom:2rem;position:relative;z-index:1}
+.c-quote{font-family:'Instrument Serif',serif;font-style:italic;
+  font-size:clamp(1.7rem,4.5vw,3.4rem);color:var(--white);line-height:1.3;
+  max-width:720px;margin:0 auto 1.3rem;position:relative;z-index:1}
+.c-quote em{font-style:normal;color:var(--cyan)}
+.c-sub{font-size:0.95rem;color:var(--fog);max-width:440px;
+  margin:0 auto 3.5rem;line-height:1.8;position:relative;z-index:1}
+.c-cta{position:relative;z-index:1}
+
+/* ── FOOTER ── */
+footer{border-top:1px solid var(--border);padding:2.5rem 4rem;
+  display:flex;align-items:center;justify-content:space-between;
+  position:relative;z-index:1;flex-wrap:wrap;gap:1rem}
+.f-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;color:var(--white)}
+.f-logo em{color:var(--cyan);font-style:normal}
+.f-links{display:flex;gap:2rem;flex-wrap:wrap}
+.f-links a{font-size:0.78rem;color:var(--fog);text-decoration:none;transition:color 0.2s}
+.f-links a:hover{color:var(--cyan)}
+.f-copy{font-size:0.7rem;color:rgba(142,168,195,0.4);letter-spacing:0.08em}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+.reveal{opacity:0;transform:translateY(28px);transition:opacity 0.65s ease,transform 0.65s ease}
+.reveal.visible{opacity:1;transform:translateY(0)}
+
+@media(max-width:1024px){
+  nav{padding:1rem 2rem}.nav-links{display:none}
+  .section{padding:5rem 1.5rem}
+  .problem-grid,.why-grid{grid-template-columns:1fr;gap:3rem}
+  .how-grid,.metrics-grid{grid-template-columns:repeat(2,1fr)}
+  .aud-grid,.price-preview{grid-template-columns:1fr}
+  .stats-row{grid-template-columns:repeat(2,1fr)}
+  .hw-metrics{grid-template-columns:1fr}
+  footer{flex-direction:column;text-align:center}
+  .c-2035{font-size:5rem}
+}
+</style>
+</head>
+<body>
+<div class="atmo"></div>
+<canvas id="starCanvas"></canvas>
+
+<!-- ── NAV ── -->
+<nav>
+  <a href="index.html" class="logo">🌤️ Neuro<em>Weather</em></a>
+  <ul class="nav-links">
+    <li><a href="#problem">Problem</a></li>
+    <li><a href="#solution">Solution</a></li>
+    <li><a href="#technology">Technology</a></li>
+    <li><a href="#pricing">Pricing</a></li>
+  </ul>
+  <div class="nav-actions">
+    <a href="login.html"   class="nav-ghost">Sign In</a>
+    <a href="demo.html"    class="nav-primary">Try Free Demo →</a>
+  </div>
+</nav>
+
+<!-- ── HERO ── -->
+<div class="hero">
+  <div class="hero-badge"><span class="pulse-dot"></span>World's First Cognitive Weather Platform</div>
+  <h1 class="hero-h">Forecast the<span class="script">Human Mind</span></h1>
+  <p class="hero-sub">
+    NeuroWeather predicts your team's <strong>focus, stress, and mental readiness</strong>
+    like a weather forecast — but for the brain.
+    <strong>Fully automatic. No wearables. No surveys.</strong>
+  </p>
+  <div class="hero-cta">
+    <a href="demo.html"    class="btn-hero">🚀 Try Free Demo</a>
+    <a href="pricing.html" class="btn-ghost">See Pricing →</a>
+  </div>
+  <div class="hero-note">
+    No account needed for demo ·
+    <a href="login.html?plan=team">Start with Team Plan →</a>
+  </div>
+
+  <!-- LIVE WIDGET -->
+  <div class="hero-widget">
+    <div class="hw-shimmer"></div>
+    <div class="hw-header">
+      <span class="hw-title">🏢 Organization Cognitive Forecast — Live</span>
+      <span class="hw-live"><span class="hw-dot"></span> AI Active · Auto-Computed</span>
+    </div>
+    <div class="hw-metrics">
+      <div class="hw-m">
+        <div class="hw-lbl">🎯 Focus Index</div>
+        <div class="hw-val" id="hw-focus" style="color:var(--blue)">—</div>
+        <div class="hw-sub" id="hw-focus-sub">Analyzing...</div>
+        <div class="hw-bar"><div class="hw-fill" id="hw-focus-fill" style="width:0%;background:linear-gradient(90deg,var(--blue),var(--cyan))"></div></div>
+      </div>
+      <div class="hw-m">
+        <div class="hw-lbl">⚡ Stress Volatility</div>
+        <div class="hw-val" id="hw-stress" style="color:var(--green)">—</div>
+        <div class="hw-sub" id="hw-stress-sub">Analyzing...</div>
+        <div class="hw-bar"><div class="hw-fill" id="hw-stress-fill" style="width:0%;background:var(--green)"></div></div>
+      </div>
+      <div class="hw-m">
+        <div class="hw-lbl">🌩️ Next Fatigue Dip</div>
+        <div class="hw-val" id="hw-dip" style="color:var(--gold);font-size:1.6rem">—</div>
+        <div class="hw-sub" id="hw-dip-sub">Analyzing...</div>
+        <div class="hw-bar"><div class="hw-fill" id="hw-dip-fill" style="width:50%;background:var(--gold)"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── STATS ── -->
+<div class="stats-row reveal">
+  <div class="s-stat"><span class="s-num">$<em>1T</em>+</span><span class="s-lbl">Lost annually to cognitive misalignment</span></div>
+  <div class="s-stat"><span class="s-num"><em>37</em>%</span><span class="s-lbl">Of major decisions made during peak fatigue</span></div>
+  <div class="s-stat"><span class="s-num"><em>4×</em></span><span class="s-lbl">More errors during undetected cognitive dip windows</span></div>
+  <div class="s-stat"><span class="s-num"><em>28</em>%</span><span class="s-lbl">Productivity gain with cognitive-aligned scheduling</span></div>
+</div>
+
+<!-- ── PROBLEM ── -->
+<section class="section" id="problem">
+  <div class="problem-grid">
+    <div class="reveal">
+      <div class="sec-tag">The Problem</div>
+      <h2 class="sec-h">Organizations are <em>flying blind</em></h2>
+      <p class="sec-body">Every major decision is made <strong>without knowing the mental readiness</strong> of the people involved. Human focus, stress, and cognitive energy fluctuate constantly — and these fluctuations <strong>directly drive performance, errors, and burnout.</strong></p>
+      <p class="sec-body" style="margin-top:1rem">Companies, hospitals, and universities still operate using <strong>clocks and calendars</strong> — not actual brain-state intelligence.</p>
+      <div class="p-quote">"We optimize everything — workflows, code, logistics — but not the state of the human brain that runs it all."</div>
+    </div>
+    <div class="p-cards reveal">
+      <div class="p-card"><span class="p-icon">📅</span><div><div class="p-title">Calendar-Blind Scheduling</div><div class="p-body">Critical meetings land at cognitive low points, causing poor decisions nobody can explain afterward.</div></div></div>
+      <div class="p-card"><span class="p-icon">🧠</span><div><div class="p-title">Invisible Burnout</div><div class="p-body">Managers have zero signal for team mental state. Burnout arrives as a complete surprise.</div></div></div>
+      <div class="p-card"><span class="p-icon">⚠️</span><div><div class="p-title">Fatigue-Driven Errors</div><div class="p-body">Mistakes cluster at predictable but undetected fatigue windows. In hospitals, this costs lives.</div></div></div>
+      <div class="p-card"><span class="p-icon">📉</span><div><div class="p-title">Wasted Human Potential</div><div class="p-body">Operations run without knowing when people are — or aren't — at their cognitive best.</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── AUDIENCE ── -->
+<div class="aud-bg" id="solution">
+<section class="section">
+  <div class="reveal" style="text-align:center">
+    <div class="sec-tag" style="justify-content:center">Who It's For</div>
+    <h2 class="sec-h" style="text-align:center">Three powerful <em>markets</em></h2>
+  </div>
+  <div class="aud-grid">
+    <div class="aud-card reveal"><span class="aud-icon">🏢</span><div class="aud-title">Enterprises & Hybrid Workforces</div><div class="aud-body">Improve productivity, reduce burnout, and schedule high-stakes decisions at peak cognitive hours. Built for distributed and hybrid teams.</div></div>
+    <div class="aud-card reveal"><span class="aud-icon">🎓</span><div class="aud-title">Universities & Exam Boards</div><div class="aud-body">Align study sessions, exams, and deadlines with collective cognitive readiness. Improve outcomes without increasing pressure on students.</div></div>
+    <div class="aud-card reveal"><span class="aud-icon">🏥</span><div class="aud-title">Hospitals & Safety-Critical Teams</div><div class="aud-body">Reduce fatigue-related medical errors by monitoring real-time cognitive-risk windows. Protect patients and staff simultaneously.</div></div>
+  </div>
+  <div class="reveal" style="text-align:center;margin-top:2rem">
+    <span style="background:rgba(240,180,41,0.09);border:1px solid rgba(240,180,41,0.22);color:var(--gold);border-radius:50px;padding:0.3rem 1rem;font-size:0.73rem;font-weight:600;letter-spacing:0.1em">
+      🔭 Future Markets: Smart Cities · Airports · Logistics · Transport Authorities
+    </span>
+  </div>
+</section>
+</div>
+
+<!-- ── TECHNOLOGY ── -->
+<section class="section" id="technology">
+  <div class="reveal" style="text-align:center">
+    <div class="sec-tag" style="justify-content:center">Core Technology</div>
+    <h2 class="sec-h" style="text-align:center">Four integrated <em>AI layers</em></h2>
+  </div>
+  <div class="how-grid">
+    <div class="how-card reveal">
+      <div class="how-num">01</div>
+      <span class="how-icon">📡</span>
+      <div class="how-title">Privacy-Safe Signal Collection</div>
+      <div class="how-body">Anonymous, aggregated behavioral patterns — time rhythms, calendar density, device interaction cadence. No personal identity or raw biometrics stored.</div>
+      <div class="how-tags"><span class="how-tag">Temporal Patterns</span><span class="how-tag">Calendar Density</span><span class="how-tag">GDPR-Safe</span></div>
+    </div>
+    <div class="how-card reveal">
+      <div class="how-num">02</div>
+      <span class="how-icon">🧬</span>
+      <div class="how-title">Cognitive State Modeling</div>
+      <div class="how-body">Neuroscience + AI models translate behavioral signals into real-time cognitive scores. Claude AI generates personalized forecasts automatically — no user input needed.</div>
+      <div class="how-tags"><span class="how-tag">Focus Probability</span><span class="how-tag">Stress Model</span><span class="how-tag">Claude AI</span></div>
+    </div>
+    <div class="how-card reveal">
+      <div class="how-num">03</div>
+      <span class="how-icon">🌦️</span>
+      <div class="how-title">Temporal Forecasting Engine</div>
+      <div class="how-body">A time-series AI model predicts mental readiness like a weather system — hours and days ahead. Human-readable forecasts anyone can act on immediately.</div>
+      <div class="how-tags"><span class="how-tag">24-Hour Forecasts</span><span class="how-tag">Weekly Outlook</span><span class="how-tag">Anomaly Detection</span></div>
+    </div>
+    <div class="how-card reveal">
+      <div class="how-num">04</div>
+      <span class="how-icon">⚡</span>
+      <div class="how-title">Action Layer — Dashboard & API</div>
+      <div class="how-body">Beautiful dashboards for users and leaders, AI-powered scheduling suggestions, burnout alerts, and a full API for HR systems, calendar tools, and classroom platforms.</div>
+      <div class="how-tags"><span class="how-tag">Leader Dashboard</span><span class="how-tag">Calendar API</span><span class="how-tag">Alerts</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── METRICS ── -->
+<div class="metrics-bg">
+<section class="section">
+  <div class="reveal" style="text-align:center">
+    <div class="sec-tag" style="justify-content:center">What We Measure</div>
+    <h2 class="sec-h" style="text-align:center">Four cognitive <em>forecast metrics</em></h2>
+  </div>
+  <div class="metrics-grid">
+    <div class="metric-card reveal">
+      <span class="metric-icon">🎯</span>
+      <div class="metric-name">Focus Index</div>
+      <div class="metric-body">Probability of sustained deep concentration based on circadian rhythm and behavioral patterns.</div>
+      <div class="metric-val" id="m-focus" style="color:var(--blue)">—</div>
+    </div>
+    <div class="metric-card reveal">
+      <span class="metric-icon">⚡</span>
+      <div class="metric-name">Stress Volatility</div>
+      <div class="metric-body">Risk of emotional reactivity and decision impairment. Triggers early burnout warnings before they become visible.</div>
+      <div class="metric-val" id="m-stress" style="color:var(--green)">—</div>
+    </div>
+    <div class="metric-card reveal">
+      <span class="metric-icon">🧩</span>
+      <div class="metric-name">Decision Fatigue Score</div>
+      <div class="metric-body">Measures when cognitive resources are depleted, making critical thinking and good judgment unreliable.</div>
+      <div class="metric-val" id="m-fatigue" style="color:var(--gold)">—</div>
+    </div>
+    <div class="metric-card reveal">
+      <span class="metric-icon">🗓️</span>
+      <div class="metric-name">Cognitive Energy Map</div>
+      <div class="metric-body">Hourly and weekly map of optimal windows for deep work, meetings, rest, and high-stakes decisions.</div>
+      <div class="metric-val" id="m-energy" style="color:var(--cyan)">—</div>
+    </div>
+  </div>
+</section>
+</div>
+
+<!-- ── WHY NOW ── -->
+<section class="section">
+  <div class="why-grid">
+    <div class="reveal">
+      <div class="sec-tag">Why Now</div>
+      <h2 class="sec-h">The moment has <em>arrived</em></h2>
+      <p class="sec-body">The convergence of AI maturity, behavioral data, and a global burnout crisis creates a once-in-a-generation window.</p>
+      <div class="why-pts" style="margin-top:2rem">
+        <div class="why-pt"><span class="why-check">✦</span><span class="why-text"><strong>Global burnout epidemic</strong> — Cognitive overload is a $1T+ crisis organizations can no longer ignore or hide.</span></div>
+        <div class="why-pt"><span class="why-check">✦</span><span class="why-text"><strong>Data-driven human performance</strong> — Organizations are shifting toward measurable, evidence-based workforce intelligence.</span></div>
+        <div class="why-pt"><span class="why-check">✦</span><span class="why-text"><strong>AI is mature enough</strong> — Large language models can now translate behavioral signals into actionable human insights in real time.</span></div>
+        <div class="why-pt"><span class="why-check">✦</span><span class="why-text"><strong>Privacy-preserving AI ready</strong> — Federated learning now makes collective modeling possible without individual tracking.</span></div>
+      </div>
+    </div>
+    <div class="intersect-box reveal">
+      <div class="venn">
+        <div class="vc vc1">Artificial<br>Intelligence</div>
+        <div class="vc vc2" style="font-size:0.58rem">Neuro<br>Weather</div>
+        <div class="vc vc3">Neuro-<br>science</div>
+      </div>
+      <div class="intersect-label">+ The Future of Work</div>
+      <div class="intersect-sub" style="margin-top:0.5rem">NeuroWeather sits at the precise intersection of AI, neuroscience, and the future of human performance — a space no competitor currently occupies.</div>
+      <div style="margin-top:1.5rem;display:flex;flex-direction:column;gap:0.6rem">
+        <div style="background:rgba(30,107,255,0.08);border:1px solid rgba(30,107,255,0.15);border-radius:10px;padding:0.7rem 1rem;font-size:0.78rem;color:var(--text)">📊 <strong>TAM:</strong> $47B workforce intelligence market by 2027</div>
+        <div style="background:rgba(0,198,224,0.06);border:1px solid rgba(0,198,224,0.14);border-radius:10px;padding:0.7rem 1rem;font-size:0.78rem;color:var(--text)">🔒 <strong>Moat:</strong> First-mover in cognitive forecasting — no direct competition</div>
+        <div style="background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.14);border-radius:10px;padding:0.7rem 1rem;font-size:0.78rem;color:var(--text)">♻️ <strong>Recurring revenue:</strong> SaaS model, monthly subscriptions</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PRICING PREVIEW ── -->
+<div class="aud-bg" id="pricing">
+<section class="section">
+  <div class="reveal" style="text-align:center">
+    <div class="sec-tag" style="justify-content:center">Simple Pricing</div>
+    <h2 class="sec-h" style="text-align:center">Start free, <em>scale as you grow</em></h2>
+  </div>
+  <div class="price-preview">
+    <div class="pp-card reveal">
+      <span class="pp-icon">👤</span>
+      <div class="pp-name">Individual</div>
+      <div class="pp-price">$9<span>/month</span></div>
+      <div class="pp-desc">Personal forecast, smart schedule, AI coaching for solo professionals.</div>
+      <a href="pricing.html?plan=individual" class="pp-btn outline">Get Started →</a>
+    </div>
+    <div class="pp-card popular reveal">
+      <div class="popular-tag">⭐ Most Popular</div>
+      <span class="pp-icon">👥</span>
+      <div class="pp-name">Team</div>
+      <div class="pp-price">$49<span>/month</span></div>
+      <div class="pp-desc">Everything + Leader dashboard, team scores, smart meeting scheduler, burnout alerts.</div>
+      <a href="pricing.html?plan=team" class="pp-btn primary">Get Team →</a>
+    </div>
+    <div class="pp-card reveal">
+      <span class="pp-icon">🏢</span>
+      <div class="pp-name">Enterprise</div>
+      <div class="pp-price">$199<span>/month</span></div>
+      <div class="pp-desc">Unlimited users, 7-day forecast, full API, custom AI training, priority support.</div>
+      <a href="pricing.html?plan=enterprise" class="pp-btn outline">Get Enterprise →</a>
+    </div>
+  </div>
+  <div class="reveal" style="text-align:center;margin-top:2rem">
+    <a href="demo.html" style="font-size:0.84rem;color:var(--fog);text-decoration:none;border:1px solid var(--border);padding:0.6rem 1.6rem;border-radius:50px;transition:border-color 0.2s,color 0.2s" onmouseover="this.style.borderColor='var(--cyan)';this.style.color='var(--cyan)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--fog)'">
+      🎮 Or try the free demo first — no account needed
+    </a>
+  </div>
+</section>
+</div>
+
+<!-- ── CLOSING ── -->
+<div class="closing">
+  <div class="c-glow"></div>
+  <div class="c-2035">2035</div>
+  <div class="c-label reveal">A Vision for 2035</div>
+  <div class="c-quote reveal">
+    "Before any important decision,<br>people will ask one question:<br>
+    <em>What's the NeuroWeather today?"</em>
+  </div>
+  <p class="c-sub reveal">Be among the first organizations to make decisions aligned with how human minds actually work.</p>
+  <div class="c-cta reveal" style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap">
+    <a href="demo.html"    class="btn-hero">🚀 Try Free Demo</a>
+    <a href="pricing.html" class="btn-ghost">View Pricing →</a>
+  </div>
+</div>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="f-logo">🌤️ Neuro<em>Weather</em></div>
+  <div class="f-links">
+    <a href="demo.html">Free Demo</a>
+    <a href="pricing.html">Pricing</a>
+    <a href="login.html">Sign In</a>
+    <a href="login.html?plan=team">Sign Up</a>
+    <a href="#problem">Problem</a>
+    <a href="#technology">Technology</a>
+  </div>
+  <div class="f-copy">© 2026 NeuroWeather · Cognitive Intelligence Platform</div>
+</footer>
+
+<script>
+// ── Stars ──
+const canvas = document.getElementById('starCanvas');
+const ctx = canvas.getContext('2d');
+function resizeCanvas(){canvas.width=innerWidth;canvas.height=innerHeight}
+resizeCanvas(); window.addEventListener('resize',resizeCanvas);
+const stars = Array.from({length:100},()=>({
+  x:Math.random()*canvas.width,y:Math.random()*canvas.height,
+  r:Math.random()*1.4+0.2,o:Math.random()*0.4+0.1,sp:Math.random()*0.3+0.05
+}));
+(function drawStars(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  stars.forEach(s=>{
+    ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    ctx.fillStyle=`rgba(180,210,255,${s.o})`;ctx.fill();
+    s.o+=s.sp*0.01*(Math.random()>.5?1:-1);
+    s.o=Math.max(0.08,Math.min(0.55,s.o));
+  });
+  requestAnimationFrame(drawStars);
+})();
+
+// ── Scroll reveal ──
+const revEls = document.querySelectorAll('.reveal');
+new IntersectionObserver((entries)=>{
+  entries.forEach((e,i)=>{
+    if(e.isIntersecting) setTimeout(()=>e.target.classList.add('visible'),i*80);
+  });
+},{threshold:0.07}).observe ? (() => {
+  const obs = new IntersectionObserver((entries)=>{
+    entries.forEach((e,i)=>{ if(e.isIntersecting) setTimeout(()=>e.target.classList.add('visible'),i*80); });
+  },{threshold:0.07});
+  revEls.forEach(r=>obs.observe(r));
+})() : revEls.forEach(r=>r.classList.add('visible'));
+
+// ── Live widget from time ──
+(function(){
+  const h=new Date().getHours(),m=new Date().getMinutes(),t=h+m/60;
+  let f=t<8?45:t<10?65+(t-8)*9:t<12?83+(t-10)*4:t<13.5?89-(t-12)*12:t<15?71-(t-13.5)*13:t<17?52+(t-15)*7:t<19?66-(t-17)*6:50-(t-19)*8;
+  let s=t<8?22:t<10?20:t<12?17:t<13.5?26:t<15?36:28;
+  f=Math.max(25,Math.min(97,Math.round(f))); s=Math.max(8,Math.min(70,Math.round(s)));
+  const dip=t<14?'2:30 PM':t<20?'8:00 PM':'Tmrw';
+  const fatigue=Math.max(10,Math.min(80,Math.round(58-f*0.33+s*0.42)));
+
+  setTimeout(()=>{
+    document.getElementById('hw-focus').textContent=f+'%';
+    document.getElementById('hw-focus-sub').textContent=f>=80?'↑ High focus window now':f>=60?'→ Moderate focus':'↓ Low — rest advised';
+    document.getElementById('hw-focus-fill').style.width=f+'%';
+    document.getElementById('hw-stress').textContent=s<25?'Low':s<45?'Moderate':'High';
+    document.getElementById('hw-stress-sub').textContent=s<25?'✅ Clear decision window':s<45?'⚠️ Monitor closely':'⛔ High risk window';
+    document.getElementById('hw-stress-fill').style.width=s+'%';
+    document.getElementById('hw-stress-fill').style.background=s<30?'var(--green)':s<50?'var(--gold)':'var(--storm)';
+    document.getElementById('hw-dip').textContent=dip;
+    document.getElementById('hw-dip-sub').textContent='⚠️ Plan a break before';
+
+    // Metrics section
+    document.getElementById('m-focus').textContent=f+'%';
+    document.getElementById('m-stress').textContent=s<25?'Low':s<45?'Mod':'High';
+    document.getElementById('m-fatigue').textContent=fatigue+'%';
+    document.getElementById('m-energy').textContent=t<11?'10–12p':t<16?'4–6p':'Tmrw 10a';
+  },700);
+})();
+</script>
+</body>
+</html>

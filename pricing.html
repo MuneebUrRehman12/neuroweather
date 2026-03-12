@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NeuroWeather — Plans & Pricing</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌤️</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://js.stripe.com/v3/"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+:root {
+  --ink: #07101f;
+  --navy: #0d1f3c;
+  --blue: #1e6bff;
+  --cyan: #00c6e0;
+  --green: #10b981;
+  --gold: #f0b429;
+  --storm: #e84c4c;
+  --fog: #8ea8c3;
+  --text: #c9ddf0;
+  --white: #fff;
+  --border: rgba(255,255,255,0.07);
+  --card: rgba(13,31,60,0.8);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--ink);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 300;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* BG */
+.bg-glow {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse 70% 50% at 20% 20%, rgba(30,107,255,0.07), transparent 60%),
+    radial-gradient(ellipse 50% 40% at 80% 70%, rgba(0,198,224,0.05), transparent 60%),
+    radial-gradient(ellipse 40% 30% at 50% 50%, rgba(240,180,41,0.03), transparent 60%);
+}
+
+/* NAV */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  padding: 1.1rem 3rem;
+  display: flex; align-items: center; justify-content: space-between;
+  background: rgba(7,16,31,0.85); backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-logo {
+  font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.25rem;
+  color: var(--white); text-decoration: none; display: flex; align-items: center; gap: 0.5rem;
+}
+.nav-logo em { color: var(--cyan); font-style: normal; }
+.nav-right { display: flex; align-items: center; gap: 1rem; }
+.nav-link {
+  font-size: 0.82rem; color: var(--fog); text-decoration: none;
+  transition: color 0.2s; font-weight: 400;
+}
+.nav-link:hover { color: var(--cyan); }
+.nav-btn {
+  background: transparent; border: 1px solid rgba(255,255,255,0.15);
+  color: var(--text); padding: 0.45rem 1.1rem; border-radius: 50px;
+  font-size: 0.8rem; cursor: pointer; font-family: 'DM Sans', sans-serif;
+  transition: border-color 0.2s, color 0.2s; text-decoration: none;
+}
+.nav-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+
+/* HERO */
+.hero {
+  padding: 9rem 2rem 4rem;
+  text-align: center;
+  position: relative; z-index: 1;
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  background: rgba(0,198,224,0.07); border: 1px solid rgba(0,198,224,0.25);
+  color: var(--cyan); border-radius: 50px; padding: 0.4rem 1.1rem;
+  font-size: 0.7rem; font-weight: 600; letter-spacing: 0.18em;
+  text-transform: uppercase; margin-bottom: 1.8rem;
+  animation: fadeUp 0.6s ease both;
+}
+.hero h1 {
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: clamp(2.4rem, 5vw, 4rem);
+  color: var(--white); line-height: 1.1; letter-spacing: -0.025em;
+  margin-bottom: 1rem; animation: fadeUp 0.6s ease 0.1s both;
+}
+.hero h1 em {
+  font-family: 'Instrument Serif', serif; font-style: italic;
+  font-weight: 400; color: var(--cyan);
+}
+.hero-sub {
+  font-size: 1.05rem; color: var(--fog); max-width: 520px; margin: 0 auto 2.5rem;
+  line-height: 1.8; animation: fadeUp 0.6s ease 0.2s both;
+}
+
+/* BILLING TOGGLE */
+.billing-toggle {
+  display: inline-flex; align-items: center; gap: 1rem;
+  background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+  border-radius: 50px; padding: 0.4rem 1.2rem;
+  margin-bottom: 4rem; animation: fadeUp 0.6s ease 0.3s both;
+}
+.billing-label { font-size: 0.82rem; color: var(--fog); font-weight: 500; }
+.billing-label.active { color: var(--white); }
+.toggle-switch {
+  width: 42px; height: 22px; background: rgba(255,255,255,0.1);
+  border-radius: 11px; position: relative; cursor: pointer;
+  transition: background 0.3s;
+}
+.toggle-switch.on { background: var(--blue); }
+.toggle-knob {
+  position: absolute; top: 3px; left: 3px;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: #fff; transition: transform 0.3s;
+}
+.toggle-switch.on .toggle-knob { transform: translateX(20px); }
+.save-badge {
+  background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3);
+  color: var(--green); border-radius: 50px; padding: 0.15rem 0.6rem;
+  font-size: 0.65rem; font-weight: 700; letter-spacing: 0.08em;
+}
+
+/* PLANS GRID */
+.plans-wrap {
+  position: relative; z-index: 1;
+  max-width: 1100px; margin: 0 auto;
+  padding: 0 2rem 6rem;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.4rem;
+  align-items: start;
+}
+
+.plan-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  padding: 2.2rem;
+  position: relative; overflow: hidden;
+  transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s;
+  animation: fadeUp 0.6s ease both;
+}
+.plan-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.3);
+}
+.plan-card.popular {
+  border-color: rgba(0,198,224,0.35);
+  box-shadow: 0 0 0 1px rgba(0,198,224,0.15), 0 20px 60px rgba(0,198,224,0.08);
+  transform: translateY(-8px);
+}
+.plan-card.popular:hover {
+  transform: translateY(-14px);
+  box-shadow: 0 0 0 1px rgba(0,198,224,0.3), 0 32px 80px rgba(0,198,224,0.15);
+}
+
+/* Glow line at top */
+.plan-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+  border-radius: 22px 22px 0 0;
+}
+.plan-card.popular::before {
+  background: linear-gradient(90deg, var(--blue), var(--cyan));
+  opacity: 0.9;
+}
+
+.popular-badge {
+  position: absolute; top: 1.4rem; right: 1.4rem;
+  background: linear-gradient(135deg, var(--blue), var(--cyan));
+  color: #fff; border-radius: 50px; padding: 0.25rem 0.8rem;
+  font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.plan-icon { font-size: 2.2rem; margin-bottom: 1rem; display: block; }
+.plan-name {
+  font-family: 'Syne', sans-serif; font-weight: 700;
+  font-size: 1.1rem; color: var(--white); margin-bottom: 0.4rem;
+}
+.plan-desc { font-size: 0.82rem; color: var(--fog); line-height: 1.6; margin-bottom: 1.8rem; }
+
+/* Price */
+.price-wrap { display: flex; align-items: baseline; gap: 0.3rem; margin-bottom: 0.4rem; }
+.price-currency { font-size: 1.2rem; font-weight: 600; color: var(--fog); margin-top: 0.3rem; }
+.price-amount {
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: 3.2rem; color: var(--white); line-height: 1; letter-spacing: -0.03em;
+  transition: all 0.3s;
+}
+.price-period { font-size: 0.8rem; color: var(--fog); }
+.price-annual { font-size: 0.72rem; color: var(--green); margin-bottom: 1.8rem; min-height: 1.2em; }
+
+/* Features */
+.plan-divider {
+  height: 1px; background: var(--border); margin: 1.5rem 0;
+}
+.features { list-style: none; display: flex; flex-direction: column; gap: 0.7rem; margin-bottom: 2rem; }
+.features li {
+  display: flex; align-items: flex-start; gap: 0.7rem;
+  font-size: 0.84rem; color: var(--text); line-height: 1.5;
+}
+.feat-icon {
+  width: 18px; height: 18px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.65rem; flex-shrink: 0; margin-top: 0.1rem;
+}
+.feat-icon.yes { background: rgba(16,185,129,0.15); color: var(--green); }
+.feat-icon.no  { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.2); }
+.feat-text.muted { color: var(--fog); }
+
+/* CTA Button */
+.plan-btn {
+  width: 100%; padding: 0.95rem;
+  border-radius: 12px; border: none;
+  font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 500;
+  cursor: pointer; letter-spacing: 0.02em;
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+  position: relative; overflow: hidden;
+}
+.plan-btn:hover:not(:disabled) { transform: translateY(-2px); }
+.plan-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.plan-btn.primary {
+  background: linear-gradient(135deg, var(--blue), var(--cyan));
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(30,107,255,0.25);
+}
+.plan-btn.primary:hover:not(:disabled) {
+  box-shadow: 0 14px 40px rgba(30,107,255,0.4);
+}
+.plan-btn.outline {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.15);
+  color: var(--text);
+}
+.plan-btn.outline:hover:not(:disabled) {
+  border-color: rgba(0,198,224,0.4); color: var(--cyan);
+}
+.plan-btn.ghost {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  color: var(--fog);
+}
+.plan-btn.ghost:hover:not(:disabled) { color: var(--text); background: rgba(255,255,255,0.07); }
+
+/* Demo strip */
+.demo-strip {
+  position: relative; z-index: 1;
+  text-align: center; padding: 0 2rem 3rem;
+}
+.demo-box {
+  display: inline-flex; align-items: center; gap: 1.2rem;
+  background: rgba(240,180,41,0.06); border: 1px solid rgba(240,180,41,0.2);
+  border-radius: 16px; padding: 1.2rem 2rem;
+}
+.demo-box-text { text-align: left; }
+.demo-box-title { font-weight: 600; color: var(--white); font-size: 0.95rem; margin-bottom: 0.2rem; }
+.demo-box-sub { font-size: 0.8rem; color: var(--fog); }
+.demo-btn {
+  background: rgba(240,180,41,0.15); border: 1px solid rgba(240,180,41,0.3);
+  color: var(--gold); padding: 0.6rem 1.4rem; border-radius: 50px;
+  font-size: 0.82rem; font-weight: 500; cursor: pointer;
+  font-family: 'DM Sans', sans-serif; white-space: nowrap;
+  text-decoration: none; display: inline-block;
+  transition: background 0.2s;
+}
+.demo-btn:hover { background: rgba(240,180,41,0.22); }
+
+/* FAQ */
+.faq-wrap {
+  position: relative; z-index: 1;
+  max-width: 680px; margin: 0 auto; padding: 0 2rem 6rem;
+}
+.faq-title {
+  font-family: 'Syne', sans-serif; font-weight: 700;
+  font-size: 1.4rem; color: var(--white);
+  text-align: center; margin-bottom: 2rem;
+}
+.faq-item {
+  border: 1px solid var(--border); border-radius: 12px;
+  margin-bottom: 0.8rem; overflow: hidden;
+}
+.faq-q {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 1rem 1.3rem; cursor: pointer;
+  font-weight: 500; color: var(--text); font-size: 0.9rem;
+  transition: color 0.2s;
+}
+.faq-q:hover { color: var(--cyan); }
+.faq-arrow { transition: transform 0.3s; color: var(--fog); }
+.faq-a {
+  display: none; padding: 0 1.3rem 1rem;
+  font-size: 0.83rem; color: var(--fog); line-height: 1.7;
+}
+.faq-item.open .faq-arrow { transform: rotate(90deg); }
+.faq-item.open .faq-a { display: block; }
+
+/* Modal overlay */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(7,16,31,0.85); backdrop-filter: blur(8px);
+  display: none; align-items: center; justify-content: center; padding: 2rem;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: #0d1f3c; border: 1px solid rgba(0,198,224,0.25);
+  border-radius: 20px; padding: 2.5rem; max-width: 440px; width: 100%;
+  animation: fadeUp 0.3s ease both;
+}
+.modal h3 {
+  font-family: 'Syne', sans-serif; font-weight: 700;
+  font-size: 1.3rem; color: var(--white); margin-bottom: 0.5rem;
+}
+.modal p { font-size: 0.88rem; color: var(--fog); line-height: 1.7; margin-bottom: 1.5rem; }
+.modal-actions { display: flex; gap: 0.8rem; }
+.modal-btn {
+  flex: 1; padding: 0.85rem; border-radius: 10px; border: none;
+  font-family: 'DM Sans', sans-serif; font-size: 0.88rem; font-weight: 500;
+  cursor: pointer; transition: opacity 0.2s;
+}
+.modal-btn.primary { background: linear-gradient(135deg, var(--blue), var(--cyan)); color: #fff; }
+.modal-btn.secondary { background: rgba(255,255,255,0.06); color: var(--fog); border: 1px solid var(--border); }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 2rem; right: 2rem; z-index: 9999;
+  background: rgba(13,31,60,0.97); border: 1px solid rgba(0,198,224,0.25);
+  border-radius: 14px; padding: 1rem 1.5rem;
+  font-size: 0.88rem; color: var(--text);
+  backdrop-filter: blur(20px); box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+  opacity: 0; transform: translateY(16px); transition: all 0.3s;
+  max-width: 320px; pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+
+/* Animations */
+@keyframes fadeUp { from { opacity:0; transform:translateY(20px) } to { opacity:1; transform:translateY(0) } }
+.plans-wrap .plan-card:nth-child(1) { animation-delay: 0.1s; }
+.plans-wrap .plan-card:nth-child(2) { animation-delay: 0.2s; }
+.plans-wrap .plan-card:nth-child(3) { animation-delay: 0.3s; }
+
+@media (max-width: 900px) {
+  .plans-wrap { grid-template-columns: 1fr; max-width: 460px; }
+  .plan-card.popular { transform: none; }
+  nav { padding: 1rem 1.5rem; }
+}
+</style>
+</head>
+<body>
+<div class="bg-glow"></div>
+<div class="toast" id="toast"></div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h3 id="modalTitle">Complete Your Purchase</h3>
+    <p id="modalBody">You'll be redirected to Stripe's secure checkout to complete your payment. Your account will be activated immediately after.</p>
+    <div class="modal-actions">
+      <button class="modal-btn primary" id="modalConfirm" onclick="confirmCheckout()">Continue to Payment →</button>
+      <button class="modal-btn secondary" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav>
+  <a href="index.html" class="nav-logo">🌤️ Neuro<em>Weather</em></a>
+  <div class="nav-right">
+    <a href="demo.html" class="nav-link">Try Demo</a>
+    <a href="login.html" class="nav-btn">Sign In</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">💳 Simple, Transparent Pricing</div>
+  <h1>Invest in your team's<br><em>cognitive performance</em></h1>
+  <p class="hero-sub">Choose the plan that fits your organization. All plans include the AI cognitive engine. Cancel anytime.</p>
+
+  <div class="billing-toggle">
+    <span class="billing-label active" id="monthlyLabel">Monthly</span>
+    <div class="toggle-switch" id="billingToggle" onclick="toggleBilling()">
+      <div class="toggle-knob"></div>
+    </div>
+    <span class="billing-label" id="annualLabel">Annual</span>
+    <span class="save-badge">Save 20%</span>
+  </div>
+</div>
+
+<!-- PLANS -->
+<div class="plans-wrap">
+
+  <!-- INDIVIDUAL -->
+  <div class="plan-card" id="card-individual">
+    <span class="plan-icon">👤</span>
+    <div class="plan-name">Individual</div>
+    <div class="plan-desc">For solo professionals who want to optimize their own cognitive performance and daily schedule.</div>
+    <div class="price-wrap">
+      <span class="price-currency">$</span>
+      <span class="price-amount" id="price-individual">9</span>
+      <span class="price-period">/month</span>
+    </div>
+    <div class="price-annual" id="annual-individual"></div>
+    <div class="plan-divider"></div>
+    <ul class="features">
+      <li><span class="feat-icon yes">✓</span><span>Personal cognitive forecast (daily)</span></li>
+      <li><span class="feat-icon yes">✓</span><span>AI-generated smart schedule</span></li>
+      <li><span class="feat-icon yes">✓</span><span>Focus, stress &amp; fatigue tracking</span></li>
+      <li><span class="feat-icon yes">✓</span><span>AI coaching &amp; recharge tips</span></li>
+      <li><span class="feat-icon yes">✓</span><span>7-day cognitive trend history</span></li>
+      <li><span class="feat-icon no">✕</span><span class="feat-text muted">Leader/team dashboard</span></li>
+      <li><span class="feat-icon no">✕</span><span class="feat-text muted">Burnout risk alerts</span></li>
+      <li><span class="feat-icon no">✕</span><span class="feat-text muted">API access</span></li>
+    </ul>
+    <button class="plan-btn outline" onclick="selectPlan('individual', 9)">Get Individual →</button>
+  </div>
+
+  <!-- TEAM (POPULAR) -->
+  <div class="plan-card popular" id="card-team">
+    <div class="popular-badge">⭐ Most Popular</div>
+    <span class="plan-icon">👥</span>
+    <div class="plan-name">Team</div>
+    <div class="plan-desc">For managers and teams of up to 10 people who want collective cognitive intelligence and smart scheduling.</div>
+    <div class="price-wrap">
+      <span class="price-currency">$</span>
+      <span class="price-amount" id="price-team">49</span>
+      <span class="price-period">/month</span>
+    </div>
+    <div class="price-annual" id="annual-team"></div>
+    <div class="plan-divider"></div>
+    <ul class="features">
+      <li><span class="feat-icon yes">✓</span><span>Everything in Individual</span></li>
+      <li><span class="feat-icon yes">✓</span><span>Leader dashboard for your team</span></li>
+      <li><span class="feat-icon yes">✓</span><span>Up to 10 team members</span></li>
+      <li><span class="feat-icon yes">✓</span><span>Smart meeting scheduler (AI)</span></li>
+      <li><span class="feat-icon yes">✓</span><span>Team cognitive scores (anonymous)</span></li>
+      <li><span class="feat-icon yes">✓</span><span>Editable session data for leaders</span></li>
+      <li><span class="feat-icon yes">✓</span><span>Burnout early warning alerts</span></li>
+      <li><span class="feat-icon no">✕</span><span class="feat-text muted">API access &amp; integrations</span></li>
+    </ul>
+    <button class="plan-btn primary" onclick="selectPlan('team', 49)">Get Team →</button>
+  </div>
+
+  <!-- ENTERPRISE -->
+  <div class="plan-card" id="card-enterprise">
+    <span class="plan-icon">🏢</span>
+    <div class="plan-name">Enterprise</div>
+    <div class="plan-desc">For hospitals, universities, and organizations that need unlimited users, API access, and full cognitive intelligence.</div>
+    <div class="price-wrap">
+      <span class="price-currency">$</span>
+      <span class="price-amount" id="price-enterprise">199</span>
+      <span class="price-period">/month</span>
+    </div>
+    <div class="price-annual" id="annual-enterprise"></div>
+    <div class="plan-divider"></div>
+    <ul class="features">
+      <li><span class="feat-icon yes">✓</span><span>Everything in Team</span></li>
+      <li><span class="feat-icon yes">✓</span><span>Unlimited team members</span></li>
+      <li><span class="feat-icon yes">✓</span><span>7-day cognitive weather forecast</span></li>
+      <li><span class="feat-icon yes">✓</span><span>Operations risk alerts</span></li>
+      <li><span class="feat-icon yes">✓</span><span>Full API for HR &amp; calendar systems</span></li>
+      <li><span class="feat-icon yes">✓</span><span>Custom AI model training</span></li>
+      <li><span class="feat-icon yes">✓</span><span>Priority support &amp; onboarding</span></li>
+      <li><span class="feat-icon yes">✓</span><span>GDPR data processing agreement</span></li>
+    </ul>
+    <button class="plan-btn outline" onclick="selectPlan('enterprise', 199)">Get Enterprise →</button>
+  </div>
+</div>
+
+<!-- DEMO STRIP -->
+<div class="demo-strip">
+  <div class="demo-box">
+    <span style="font-size:2rem">🎮</span>
+    <div class="demo-box-text">
+      <div class="demo-box-title">Not ready to commit? Try the free demo first.</div>
+      <div class="demo-box-sub">Full 3-day access · No credit card · No signup needed</div>
+    </div>
+    <a href="demo.html" class="demo-btn">Try Free Demo →</a>
+  </div>
+</div>
+
+<!-- FAQ -->
+<div class="faq-wrap">
+  <div class="faq-title">Frequently Asked Questions</div>
+
+  <div class="faq-item" onclick="toggleFaq(this)">
+    <div class="faq-q">Can I cancel anytime? <span class="faq-arrow">›</span></div>
+    <div class="faq-a">Yes. Cancel any time from your account settings. You keep access until the end of your billing period. No cancellation fees.</div>
+  </div>
+  <div class="faq-item" onclick="toggleFaq(this)">
+    <div class="faq-q">Is my team's data private? <span class="faq-arrow">›</span></div>
+    <div class="faq-a">Absolutely. All cognitive data is anonymized and aggregated. No individual is ever identified by name in team dashboards. We never sell your data. GDPR-compliant by design.</div>
+  </div>
+  <div class="faq-item" onclick="toggleFaq(this)">
+    <div class="faq-q">What payment methods do you accept? <span class="faq-arrow">›</span></div>
+    <div class="faq-a">All major credit and debit cards via Stripe — Visa, Mastercard, Amex, and more. Payments are processed securely by Stripe. We never store your card details.</div>
+  </div>
+  <div class="faq-item" onclick="toggleFaq(this)">
+    <div class="faq-q">Can I upgrade or downgrade my plan? <span class="faq-arrow">›</span></div>
+    <div class="faq-a">Yes. Upgrade at any time and the price difference is prorated. Downgrade takes effect at the next billing cycle.</div>
+  </div>
+  <div class="faq-item" onclick="toggleFaq(this)">
+    <div class="faq-q">Do you offer student or nonprofit discounts? <span class="faq-arrow">›</span></div>
+    <div class="faq-a">Yes! We offer 50% off for verified students and nonprofits. Email us at hello@neuroweather.ai with your student ID or nonprofit status.</div>
+  </div>
+  <div class="faq-item" onclick="toggleFaq(this)">
+    <div class="faq-q">How does the AI detect my cognitive state without wearables? <span class="faq-arrow">›</span></div>
+    <div class="faq-a">NeuroWeather uses circadian rhythm science and behavioral pattern analysis — time of day, day of week, calendar density, and interaction cadence — to model cognitive readiness. No wearables or biometric devices are needed.</div>
+  </div>
+</div>
+
+<script>
+// ── Supabase ──
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ── State ──
+let isAnnual = false;
+let selectedPlanKey = null;
+let selectedPlanPrice = null;
+
+const prices = {
+  monthly:  { individual: 9,   team: 49,   enterprise: 199 },
+  annual:   { individual: 7.2, team: 39.2, enterprise: 159 }
+};
+
+// ── Billing toggle ──
+function toggleBilling() {
+  isAnnual = !isAnnual;
+  const toggle = document.getElementById('billingToggle');
+  toggle.classList.toggle('on', isAnnual);
+  document.getElementById('monthlyLabel').classList.toggle('active', !isAnnual);
+  document.getElementById('annualLabel').classList.toggle('active', isAnnual);
+  updatePrices();
+}
+
+function updatePrices() {
+  const p = isAnnual ? prices.annual : prices.monthly;
+  ['individual','team','enterprise'].forEach(plan => {
+    const monthly = prices.monthly[plan];
+    const current = p[plan];
+    document.getElementById('price-' + plan).textContent = isAnnual
+      ? current.toFixed(2).replace('.00','')
+      : current;
+    document.getElementById('annual-' + plan).textContent = isAnnual
+      ? `$${(current * 12).toFixed(0)}/year — save $${((monthly - current) * 12).toFixed(0)}`
+      : '';
+  });
+}
+
+// ── Plan selection ──
+function selectPlan(plan, price) {
+  selectedPlanKey = plan;
+  selectedPlanPrice = isAnnual ? prices.annual[plan] : price;
+
+  const planNames = { individual: 'Individual', team: 'Team', enterprise: 'Enterprise' };
+  const billing = isAnnual ? 'annual' : 'monthly';
+  const displayPrice = isAnnual
+    ? `$${(prices.annual[plan] * 12).toFixed(0)}/year`
+    : `$${price}/month`;
+
+  document.getElementById('modalTitle').textContent = `Activate ${planNames[plan]} Plan`;
+  document.getElementById('modalBody').innerHTML =
+    `You're selecting the <strong style="color:var(--white)">${planNames[plan]}</strong> plan at <strong style="color:var(--cyan)">${displayPrice}</strong>.<br><br>
+    You'll be taken to Stripe's secure checkout. Use test card <code style="background:rgba(0,198,224,0.1);border-radius:4px;padding:2px 6px;font-family:monospace;font-size:0.82rem;color:var(--cyan)">4242 4242 4242 4242</code> with any future date and any 3-digit CVV to simulate payment.<br><br>
+    After payment, your account will be activated automatically.`;
+
+  document.getElementById('modalOverlay').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('show');
+}
+
+async function confirmCheckout() {
+  document.getElementById('modalConfirm').textContent = 'Redirecting...';
+  document.getElementById('modalConfirm').disabled = true;
+
+  // Check if user is logged in
+  const { data: { session } } = await sb.auth.getSession();
+
+  if (!session) {
+    // Not logged in → go create account first
+    closeModal();
+    window.location.href = `login.html?plan=${selectedPlanKey}`;
+    return;
+  }
+
+  // Logged in → initiate Stripe
+  try {
+    const stripe = Stripe(STRIPE_KEY);
+    const priceId = STRIPE_PRICES[selectedPlanKey];
+
+    if (!priceId || priceId.includes('YOUR')) {
+      // Stripe not configured — show demo success for prototype
+      closeModal();
+      showToast(`✅ ${selectedPlanKey} plan selected! (Stripe in test mode — configure STRIPE_PRICES in config.js)`);
+      setTimeout(() => {
+        window.location.href = `dashboard.html?view=${selectedPlanKey === 'individual' ? 'user' : 'leader'}&plan=${selectedPlanKey}`;
+      }, 2000);
+      return;
+    }
+
+    // Real Stripe checkout
+    const { error } = await stripe.redirectToCheckout({
+      lineItems: [{ price: priceId, quantity: 1 }],
+      mode: 'subscription',
+      successUrl: window.location.origin + `/dashboard.html?plan=${selectedPlanKey}&success=1`,
+      cancelUrl:  window.location.origin + '/pricing.html',
+      customerEmail: session.user.email,
+    });
+
+    if (error) {
+      showToast('❌ ' + error.message);
+      document.getElementById('modalConfirm').textContent = 'Continue to Payment →';
+      document.getElementById('modalConfirm').disabled = false;
+    }
+
+  } catch(e) {
+    showToast('❌ Payment error. Please try again.');
+    document.getElementById('modalConfirm').textContent = 'Continue to Payment →';
+    document.getElementById('modalConfirm').disabled = false;
+  }
+}
+
+// ── FAQ ──
+function toggleFaq(el) {
+  el.classList.toggle('open');
+}
+
+// ── Toast ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 4000);
+}
+
+// ── Check URL for auto-plan ──
+const urlPlan = new URLSearchParams(window.location.search).get('plan');
+if (urlPlan && ['individual','team','enterprise'].includes(urlPlan)) {
+  const planPrices = { individual: 9, team: 49, enterprise: 199 };
+  setTimeout(() => selectPlan(urlPlan, planPrices[urlPlan]), 600);
+}
+
+// Init
+updatePrices();
+</script>
+</body>
+</html>

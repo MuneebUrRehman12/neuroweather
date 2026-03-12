@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NeuroWeather — Dashboard</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌤️</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+:root {
+  --ink:#07101f; --navy:#0d1f3c; --blue:#1e6bff; --cyan:#00c6e0;
+  --green:#10b981; --gold:#f0b429; --storm:#e84c4c; --purple:#8b5cf6;
+  --fog:#8ea8c3; --text:#c9ddf0; --white:#fff;
+  --border:rgba(255,255,255,0.07); --card:rgba(13,31,60,0.85);
+  --input:rgba(255,255,255,0.04);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--ink);color:var(--text);font-family:'DM Sans',sans-serif;
+  font-weight:300;display:flex;flex-direction:column;overflow:hidden}
+
+/* ── TOPBAR ── */
+.topbar{
+  background:rgba(7,16,31,0.95);border-bottom:1px solid var(--border);
+  backdrop-filter:blur(20px);padding:0 1.8rem;height:56px;
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;z-index:100;
+}
+.tb-left{display:flex;align-items:center;gap:1.2rem}
+.tb-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;
+  color:var(--white);text-decoration:none;display:flex;align-items:center;gap:0.4rem}
+.tb-logo em{color:var(--cyan);font-style:normal}
+.tb-divider{width:1px;height:20px;background:var(--border)}
+.tb-view-pills{display:flex;background:rgba(255,255,255,0.04);
+  border:1px solid var(--border);border-radius:8px;padding:3px;gap:2px}
+.view-pill{padding:0.3rem 0.9rem;border-radius:6px;font-size:0.75rem;font-weight:500;
+  color:var(--fog);cursor:pointer;border:none;background:transparent;
+  font-family:'DM Sans',sans-serif;transition:all 0.2s;white-space:nowrap}
+.view-pill.active{background:rgba(30,107,255,0.2);color:var(--cyan)}
+.tb-right{display:flex;align-items:center;gap:0.8rem}
+.ai-badge{display:flex;align-items:center;gap:0.4rem;font-size:0.68rem;
+  color:var(--cyan);background:rgba(0,198,224,0.07);
+  border:1px solid rgba(0,198,224,0.18);border-radius:50px;padding:0.28rem 0.75rem;font-weight:600}
+.ai-dot{width:5px;height:5px;border-radius:50%;background:var(--cyan);animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.6);opacity:0.5}}
+.plan-chip{font-size:0.68rem;font-weight:700;padding:0.28rem 0.7rem;border-radius:50px;
+  text-transform:uppercase;letter-spacing:0.08em}
+.plan-chip.individual{background:rgba(30,107,255,0.12);color:var(--blue);border:1px solid rgba(30,107,255,0.2)}
+.plan-chip.team{background:rgba(0,198,224,0.1);color:var(--cyan);border:1px solid rgba(0,198,224,0.2)}
+.plan-chip.enterprise{background:rgba(240,180,41,0.1);color:var(--gold);border:1px solid rgba(240,180,41,0.2)}
+.plan-chip.demo{background:rgba(255,255,255,0.05);color:var(--fog);border:1px solid var(--border)}
+.tb-user{display:flex;align-items:center;gap:0.55rem;font-size:0.8rem;color:var(--fog);
+  cursor:pointer;padding:0.3rem 0.6rem;border-radius:8px;transition:background 0.2s}
+.tb-user:hover{background:rgba(255,255,255,0.04)}
+.tb-avatar{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:0.7rem;font-weight:700;color:#fff;flex-shrink:0}
+.tb-signout{font-size:0.75rem;color:var(--fog);background:transparent;border:1px solid var(--border);
+  padding:0.28rem 0.8rem;border-radius:50px;cursor:pointer;font-family:'DM Sans',sans-serif;
+  transition:border-color 0.2s,color 0.2s}
+.tb-signout:hover{border-color:var(--storm);color:var(--storm)}
+
+/* ── LAYOUT ── */
+.app-body{display:flex;flex:1;overflow:hidden}
+
+/* ── SIDEBAR ── */
+.sidebar{width:200px;flex-shrink:0;background:rgba(10,18,32,0.6);
+  border-right:1px solid var(--border);padding:1rem 0.7rem;
+  display:flex;flex-direction:column;gap:0.2rem;overflow-y:auto}
+.nav-sec{font-size:0.58rem;letter-spacing:0.22em;text-transform:uppercase;
+  color:rgba(142,168,195,0.3);font-weight:700;padding:0.7rem 0.7rem 0.2rem;margin-top:0.3rem}
+.nav-btn{display:flex;align-items:center;gap:0.65rem;padding:0.6rem 0.8rem;
+  border-radius:9px;font-size:0.8rem;color:var(--fog);cursor:pointer;
+  border:none;background:transparent;width:100%;text-align:left;
+  font-family:'DM Sans',sans-serif;transition:background 0.2s,color 0.2s;position:relative}
+.nav-btn:hover{background:rgba(255,255,255,0.04);color:var(--text)}
+.nav-btn.active{background:rgba(30,107,255,0.12);color:var(--cyan)}
+.nav-icon{font-size:0.95rem;width:16px;text-align:center;flex-shrink:0}
+.nav-badge{margin-left:auto;background:var(--storm);color:#fff;border-radius:50%;
+  width:16px;height:16px;font-size:0.58rem;display:flex;align-items:center;justify-content:center}
+
+/* ── MAIN CONTENT ── */
+.main{flex:1;overflow-y:auto;padding:1.6rem}
+
+/* ── CARDS ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.4rem;backdrop-filter:blur(10px)}
+.card-title{font-family:'Syne',sans-serif;font-weight:700;font-size:0.68rem;
+  letter-spacing:0.18em;text-transform:uppercase;color:var(--fog);
+  margin-bottom:1.1rem;display:flex;align-items:center;gap:0.5rem}
+.g2{display:grid;grid-template-columns:repeat(2,1fr);gap:1.1rem}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:1.1rem}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:0.9rem}
+.gc2{grid-column:span 2}
+.mt1{margin-top:1rem}.mt15{margin-top:1.4rem}
+
+/* ── PAGE SYSTEM ── */
+.page{display:none}
+.page.active{display:block;animation:fadeIn 0.3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── GREETING ── */
+.greeting{margin-bottom:1.4rem}
+.greeting-h{font-family:'Syne',sans-serif;font-size:1.25rem;font-weight:700;color:var(--white)}
+.greeting-s{color:var(--fog);font-size:0.84rem;margin-top:0.2rem}
+
+/* ── STAT BOX ── */
+.stat-box{text-align:center;display:flex;flex-direction:column;justify-content:center;align-items:center}
+.stat-num{font-family:'Syne',sans-serif;font-weight:800;font-size:2.2rem;line-height:1;margin-bottom:0.25rem}
+.stat-lbl{font-size:0.72rem;color:var(--fog)}
+
+/* ── SCORE RING ── */
+.ring-svg{width:100px;height:100px;display:block;margin:0 auto 0.7rem}
+.ring-bg{fill:none;stroke:rgba(255,255,255,0.05);stroke-width:9}
+.ring-fill{fill:none;stroke-width:9;stroke-linecap:round;
+  transform:rotate(-90deg);transform-origin:50% 50%;
+  transition:stroke-dashoffset 1.6s ease}
+.ring-num{font-family:'Syne',sans-serif;font-weight:800;font-size:1.55rem;
+  fill:var(--white);dominant-baseline:middle;text-anchor:middle}
+.ring-sub{font-size:0.52rem;fill:var(--fog);dominant-baseline:middle;text-anchor:middle;
+  letter-spacing:0.1em;text-transform:uppercase}
+.score-state{font-size:0.95rem;font-weight:600;color:var(--white);margin-bottom:0.15rem;text-align:center}
+.score-sub{font-size:0.72rem;color:var(--fog);text-align:center}
+
+/* ── BARS ── */
+.bar-row{margin-bottom:0.9rem}
+.bar-row:last-child{margin-bottom:0}
+.bar-lbl{display:flex;justify-content:space-between;font-size:0.75rem;color:var(--fog);margin-bottom:0.35rem}
+.bar-val{font-weight:600}
+.bar-track{height:7px;background:rgba(255,255,255,0.05);border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px;transition:width 1.4s ease}
+
+/* ── TIMELINE ── */
+.tl-wrap{padding:0.4rem 0 1.6rem}
+.tl{display:flex;gap:3px;align-items:flex-end;height:58px}
+.tl-b{flex:1;border-radius:3px 3px 0 0;min-height:4px;cursor:pointer;
+  transition:opacity 0.2s,transform 0.15s;position:relative}
+.tl-b:hover{opacity:0.8;transform:scaleY(1.06);transform-origin:bottom}
+.tl-b .tip{position:absolute;bottom:calc(100%+6px);left:50%;transform:translateX(-50%);
+  background:rgba(13,31,60,0.97);border:1px solid var(--border);border-radius:7px;
+  padding:0.3rem 0.55rem;font-size:0.62rem;white-space:nowrap;
+  opacity:0;pointer-events:none;transition:opacity 0.2s;z-index:10}
+.tl-b:hover .tip{opacity:1}
+.tl-t{position:absolute;bottom:-16px;left:50%;transform:translateX(-50%);
+  font-size:0.57rem;color:var(--fog);white-space:nowrap}
+.tl-now::before{content:'NOW';position:absolute;top:-19px;left:50%;transform:translateX(-50%);
+  font-size:0.52rem;font-weight:700;color:var(--cyan);letter-spacing:0.1em;white-space:nowrap}
+
+/* ── CONDITIONS ── */
+.condition{border-radius:12px;padding:1.1rem 1.3rem;margin-bottom:0.9rem;
+  display:flex;align-items:center;gap:0.9rem}
+.cond-icon{font-size:2rem;flex-shrink:0}
+.cond-title{font-family:'Syne',sans-serif;font-weight:700;font-size:0.95rem;color:var(--white);margin-bottom:0.2rem}
+.cond-body{font-size:0.79rem;color:var(--fog);line-height:1.5}
+
+/* ── ALERTS ── */
+.alert{display:flex;align-items:flex-start;gap:0.9rem;padding:0.9rem 1.1rem;
+  border-radius:11px;margin-bottom:0.7rem}
+.alert:last-child{margin-bottom:0}
+.a-ico{font-size:1.2rem;flex-shrink:0}
+.a-title{font-weight:600;font-size:0.84rem;margin-bottom:0.18rem}
+.a-body{font-size:0.76rem;color:var(--fog);line-height:1.5}
+.a-good{background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.18)}
+.a-warn{background:rgba(240,180,41,0.07);border:1px solid rgba(240,180,41,0.18)}
+.a-danger{background:rgba(232,76,76,0.07);border:1px solid rgba(232,76,76,0.18)}
+.a-info{background:rgba(30,107,255,0.06);border:1px solid rgba(30,107,255,0.14)}
+
+/* ── SLOTS ── */
+.slot{padding:0.85rem 1.1rem;border-radius:11px;margin-bottom:0.65rem;
+  display:flex;align-items:center;gap:0.9rem;border:2px solid transparent;transition:transform 0.2s}
+.slot:hover{transform:translateX(4px)}
+.slot-time{font-family:'Syne',sans-serif;font-weight:700;font-size:0.95rem;width:58px;flex-shrink:0}
+.slot-info{flex:1}
+.slot-title{font-size:0.84rem;font-weight:500;color:var(--text)}
+.slot-sub{font-size:0.73rem;color:var(--fog);margin-top:0.12rem}
+.slot-badge{font-size:0.63rem;font-weight:700;padding:0.18rem 0.6rem;border-radius:50px;
+  letter-spacing:0.06em;flex-shrink:0;text-transform:uppercase}
+
+/* ── AI BOX ── */
+.ai-box{background:rgba(0,198,224,0.04);border:1px solid rgba(0,198,224,0.13);
+  border-radius:13px;padding:1.1rem 1.3rem;margin-top:0.9rem}
+.ai-box-header{display:flex;align-items:center;gap:0.5rem;margin-bottom:0.7rem;
+  font-family:'Syne',sans-serif;font-size:0.65rem;font-weight:700;
+  color:var(--cyan);letter-spacing:0.15em;text-transform:uppercase}
+.ai-text{font-size:0.85rem;color:var(--text);line-height:1.75;white-space:pre-wrap}
+.typing::after{content:'▋';animation:blink 1s step-end infinite;color:var(--cyan)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* ── THINKING ── */
+.thinking{text-align:center;padding:1.8rem;display:flex;flex-direction:column;align-items:center;gap:0.8rem}
+.spinner{width:36px;height:36px;border:2.5px solid rgba(0,198,224,0.12);
+  border-top:2.5px solid var(--cyan);border-radius:50%;animation:spin 0.9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.thinking p{font-size:0.82rem;color:var(--fog);font-style:italic}
+
+/* ── TEAM ROWS ── */
+.team-row{display:flex;align-items:center;gap:0.9rem;padding:0.8rem 0.9rem;
+  border-radius:9px;margin-bottom:0.45rem;background:rgba(255,255,255,0.02);
+  border:1px solid var(--border);transition:border-color 0.2s}
+.team-row:hover{border-color:rgba(0,198,224,0.18)}
+.tr-av{width:32px;height:32px;border-radius:50%;flex-shrink:0;display:flex;
+  align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;color:#fff}
+.tr-name{font-size:0.84rem;font-weight:500;color:var(--text);flex:1}
+.tr-role{font-size:0.68rem;color:var(--fog)}
+.tr-score{font-family:'Syne',sans-serif;font-weight:700;font-size:0.95rem;width:36px;text-align:right}
+.tr-badge{padding:0.16rem 0.6rem;border-radius:50px;font-size:0.6rem;font-weight:700;
+  letter-spacing:0.05em;text-transform:uppercase}
+.tr-edit-btn{background:transparent;border:1px solid var(--border);color:var(--fog);
+  padding:0.22rem 0.6rem;border-radius:6px;font-size:0.68rem;cursor:pointer;
+  font-family:'DM Sans',sans-serif;transition:border-color 0.2s,color 0.2s;margin-left:0.5rem}
+.tr-edit-btn:hover{border-color:var(--cyan);color:var(--cyan)}
+
+/* ── EDIT MODAL ── */
+.modal-ov{position:fixed;inset:0;z-index:200;background:rgba(7,16,31,0.88);
+  backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:2rem}
+.modal-ov.show{display:flex}
+.modal{background:#0d1f3c;border:1px solid rgba(0,198,224,0.22);border-radius:18px;
+  padding:2rem;max-width:420px;width:100%;animation:fadeIn 0.3s ease}
+.modal h3{font-family:'Syne',sans-serif;font-weight:700;font-size:1.15rem;
+  color:var(--white);margin-bottom:0.4rem}
+.modal p{font-size:0.82rem;color:var(--fog);margin-bottom:1.3rem;line-height:1.6}
+.modal-field{margin-bottom:1rem}
+.modal-field label{display:block;font-size:0.74rem;color:var(--fog);margin-bottom:0.35rem;font-weight:500}
+.modal-field input,.modal-field select{width:100%;background:var(--input);border:1px solid var(--border);
+  border-radius:8px;padding:0.7rem 0.9rem;color:var(--white);
+  font-family:'DM Sans',sans-serif;font-size:0.86rem;outline:none;
+  transition:border-color 0.2s;appearance:none}
+.modal-field input:focus,.modal-field select:focus{border-color:rgba(0,198,224,0.35)}
+.modal-field input[type=range]{padding:0.3rem 0;accent-color:var(--cyan);height:auto;border:none;background:transparent}
+.modal-actions{display:flex;gap:0.7rem;margin-top:1.5rem}
+.modal-btn{flex:1;padding:0.8rem;border-radius:9px;border:none;
+  font-family:'DM Sans',sans-serif;font-size:0.86rem;font-weight:500;cursor:pointer;transition:opacity 0.2s}
+.modal-btn.save{background:linear-gradient(135deg,var(--blue),var(--cyan));color:#fff}
+.modal-btn.cancel{background:rgba(255,255,255,0.05);color:var(--fog);border:1px solid var(--border)}
+
+/* ── WEEK CHART ── */
+.week-chart{display:flex;gap:0.7rem;align-items:flex-end;height:110px;padding-bottom:1.5rem;margin-top:0.5rem}
+.wc-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:0.25rem}
+.wc-bar{width:100%;border-radius:5px 5px 0 0;transition:height 0.8s ease}
+.wc-score{font-size:0.62rem;font-weight:700}
+.wc-day{font-size:0.6rem;color:var(--fog)}
+
+/* ── WEEK FORECAST ── */
+.wf-row{display:flex;align-items:center;gap:0.9rem;padding:0.8rem 1.1rem;
+  background:rgba(255,255,255,0.02);border:1px solid var(--border);
+  border-radius:11px;margin-bottom:0.65rem;transition:border-color 0.2s}
+.wf-row:hover{border-color:rgba(0,198,224,0.14)}
+.wf-ico{font-size:1.5rem;width:32px;text-align:center;flex-shrink:0}
+.wf-day{font-size:0.84rem;font-weight:500;color:var(--text);flex:1}
+.wf-rec{font-size:0.76rem;color:var(--fog);flex:1}
+.wf-score{font-family:'Syne',sans-serif;font-weight:700;font-size:1.05rem;text-align:right}
+.wf-lbl{font-size:0.62rem;color:var(--fog);text-align:right}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:1.5rem;right:1.5rem;background:rgba(13,31,60,0.97);
+  border:1px solid rgba(0,198,224,0.25);border-radius:13px;padding:0.9rem 1.3rem;
+  font-size:0.84rem;color:var(--text);z-index:9999;opacity:0;transform:translateY(14px);
+  transition:all 0.3s;max-width:300px;backdrop-filter:blur(20px);box-shadow:0 12px 40px rgba(0,0,0,0.4);pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+
+/* ── UPGRADE BANNER ── */
+.upgrade-banner{background:linear-gradient(135deg,rgba(240,180,41,0.08),rgba(30,107,255,0.08));
+  border:1px solid rgba(240,180,41,0.2);border-radius:13px;padding:1.1rem 1.3rem;
+  display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1.3rem}
+.upgrade-text{font-size:0.84rem;color:var(--text)}
+.upgrade-text strong{color:var(--gold)}
+.upgrade-btn{background:linear-gradient(135deg,var(--gold),#e8940a);color:#000;
+  padding:0.5rem 1.2rem;border-radius:50px;font-size:0.78rem;font-weight:700;
+  text-decoration:none;white-space:nowrap;transition:transform 0.2s}
+.upgrade-btn:hover{transform:scale(1.04)}
+
+@media(max-width:768px){
+  .sidebar{display:none}
+  .g3,.g4{grid-template-columns:1fr 1fr}
+  .g2,.gc2{grid-column:span 1;grid-template-columns:1fr}
+  .tb-view-pills{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- EDIT SESSION MODAL (Leader only) -->
+<div class="modal-ov" id="editModal">
+  <div class="modal">
+    <h3>✏️ Edit Session Data</h3>
+    <p>Adjust the cognitive scores for this team member's session. Changes are saved to the database.</p>
+    <input type="hidden" id="editSessionId">
+    <div class="modal-field">
+      <label>Member Name</label>
+      <input type="text" id="editName" readonly style="opacity:0.6;cursor:not-allowed">
+    </div>
+    <div class="modal-field">
+      <label>Focus Score: <span id="editFocusVal" style="color:var(--cyan)">75</span>%</label>
+      <input type="range" min="0" max="100" id="editFocus" oninput="document.getElementById('editFocusVal').textContent=this.value">
+    </div>
+    <div class="modal-field">
+      <label>Stress Score: <span id="editStressVal" style="color:var(--gold)">25</span>%</label>
+      <input type="range" min="0" max="100" id="editStress" oninput="document.getElementById('editStressVal').textContent=this.value">
+    </div>
+    <div class="modal-field">
+      <label>Fatigue Score: <span id="editFatigueVal" style="color:var(--storm)">30</span>%</label>
+      <input type="range" min="0" max="100" id="editFatigue" oninput="document.getElementById('editFatigueVal').textContent=this.value">
+    </div>
+    <div class="modal-field">
+      <label>Notes (optional)</label>
+      <input type="text" id="editNotes" placeholder="e.g. Back from vacation, high workload week">
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn save" onclick="saveSession()">Save Changes</button>
+      <button class="modal-btn cancel" onclick="closeEditModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ── TOPBAR ── -->
+<div class="topbar">
+  <div class="tb-left">
+    <a href="index.html" class="tb-logo">🌤️ Neuro<em>Weather</em></a>
+    <div class="tb-divider"></div>
+    <div class="tb-view-pills" id="viewPills" style="display:none">
+      <button class="view-pill active" id="pillUser"   onclick="setView('user')">👤 My Forecast</button>
+      <button class="view-pill"        id="pillLeader" onclick="setView('leader')">👔 Team View</button>
+    </div>
+  </div>
+  <div class="tb-right">
+    <div class="ai-badge"><span class="ai-dot"></span>AI Active</div>
+    <span class="plan-chip" id="planChip">demo</span>
+    <div class="tb-user" id="tbUser">
+      <div class="tb-avatar" id="tbAvatar" style="background:linear-gradient(135deg,var(--blue),var(--cyan))">?</div>
+      <span id="tbName">Loading...</span>
+    </div>
+    <button class="tb-signout" onclick="signOut()">Sign Out</button>
+  </div>
+</div>
+
+<!-- ── APP BODY ── -->
+<div class="app-body">
+
+  <!-- SIDEBAR (user) -->
+  <div class="sidebar" id="sidebarUser">
+    <div class="nav-sec">My Day</div>
+    <button class="nav-btn active" onclick="showPage('u-home',this,true)"><span class="nav-icon">🌤️</span>My Forecast</button>
+    <button class="nav-btn" onclick="showPage('u-schedule',this,true)"><span class="nav-icon">📅</span>Smart Schedule</button>
+    <button class="nav-btn" onclick="showPage('u-tips',this,true)"><span class="nav-icon">💡</span>Recharge Tips</button>
+    <div class="nav-sec">Insights</div>
+    <button class="nav-btn" onclick="showPage('u-week',this,true)"><span class="nav-icon">📈</span>Weekly Trend</button>
+    <button class="nav-btn" onclick="showPage('u-coach',this,true)"><span class="nav-icon">🤖</span>AI Coach</button>
+    <div class="nav-sec">Account</div>
+    <button class="nav-btn" onclick="window.location.href='pricing.html'"><span class="nav-icon">⬆️</span>Upgrade Plan</button>
+  </div>
+
+  <!-- SIDEBAR (leader) -->
+  <div class="sidebar" id="sidebarLeader" style="display:none">
+    <div class="nav-sec">Organization</div>
+    <button class="nav-btn active" onclick="showPage('l-home',this,false)"><span class="nav-icon">🏢</span>Team Overview</button>
+    <button class="nav-btn" onclick="showPage('l-meetings',this,false)"><span class="nav-icon">📅</span>Smart Meetings</button>
+    <button class="nav-btn" onclick="showPage('l-alerts',this,false)"><span class="nav-icon">🚨</span>Alerts<span class="nav-badge">2</span></button>
+    <div class="nav-sec">Analytics</div>
+    <button class="nav-btn" onclick="showPage('l-team',this,false)"><span class="nav-icon">👥</span>Team Scores</button>
+    <button class="nav-btn" onclick="showPage('l-forecast',this,false)"><span class="nav-icon">🔮</span>7-Day Forecast</button>
+    <button class="nav-btn" onclick="showPage('l-briefing',this,false)"><span class="nav-icon">🤖</span>AI Briefing</button>
+    <div class="nav-sec">Account</div>
+    <button class="nav-btn" onclick="window.location.href='pricing.html'"><span class="nav-icon">⬆️</span>Upgrade Plan</button>
+  </div>
+
+  <!-- ── MAIN CONTENT ── -->
+  <div class="main" id="mainContent">
+
+    <!-- ════════════ USER PAGES ════════════ -->
+
+    <!-- U-HOME -->
+    <div class="page active" id="u-home">
+      <div class="greeting">
+        <div class="greeting-h" id="u-greeting">Loading...</div>
+        <div class="greeting-s" id="u-date">Computing your cognitive forecast...</div>
+      </div>
+      <div id="u-upgrade-banner"></div>
+      <div class="g3">
+        <div class="card gc2">
+          <div class="card-title">🌤️ Today's Cognitive Condition</div>
+          <div class="condition" id="u-condition" style="background:rgba(30,107,255,0.07);border:1px solid rgba(30,107,255,0.18)">
+            <span class="cond-icon" id="u-cond-icon">⏳</span>
+            <div>
+              <div class="cond-title" id="u-cond-title">Analyzing...</div>
+              <div class="cond-body"  id="u-cond-body">AI is reading your cognitive signals.</div>
+            </div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-lbl"><span>🎯 Focus Index</span><span class="bar-val" id="u-focus-lbl" style="color:var(--blue)">—</span></div>
+            <div class="bar-track"><div class="bar-fill" id="u-focus-bar" style="width:0%;background:linear-gradient(90deg,var(--blue),var(--cyan))"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-lbl"><span>⚡ Stress Level</span><span class="bar-val" id="u-stress-lbl" style="color:var(--green)">—</span></div>
+            <div class="bar-track"><div class="bar-fill" id="u-stress-bar" style="width:0%;background:var(--green)"></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-lbl"><span>🧩 Decision Fatigue</span><span class="bar-val" id="u-fatigue-lbl" style="color:var(--gold)">—</span></div>
+            <div class="bar-track"><div class="bar-fill" id="u-fatigue-bar" style="width:0%;background:var(--gold)"></div></div>
+          </div>
+        </div>
+        <div class="card stat-box">
+          <div class="card-title" style="justify-content:center">Cognitive Score</div>
+          <svg class="ring-svg" viewBox="0 0 100 100">
+            <circle class="ring-bg" cx="50" cy="50" r="40"/>
+            <circle class="ring-fill" id="u-ring" cx="50" cy="50" r="40"
+              stroke="url(#rg)" stroke-dasharray="251.2" stroke-dashoffset="251.2"/>
+            <defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#1e6bff"/><stop offset="100%" stop-color="#00c6e0"/>
+            </linearGradient></defs>
+            <text class="ring-num" id="u-ring-num" x="50" y="46">—</text>
+            <text class="ring-sub" x="50" y="58">/100</text>
+          </svg>
+          <div class="score-state" id="u-score-state">—</div>
+          <div class="score-sub"   id="u-score-sub">—</div>
+        </div>
+      </div>
+      <div class="card mt15">
+        <div class="card-title">📊 Hourly Brain Forecast — Today</div>
+        <div class="tl-wrap"><div class="tl" id="u-tl"></div></div>
+        <div style="display:flex;gap:1.2rem;font-size:0.68rem;color:var(--fog);flex-wrap:wrap">
+          <span>🟦 High Focus</span><span>🟩 Good</span><span>🟨 Moderate</span><span>🟥 Low</span>
+        </div>
+      </div>
+      <div class="card mt15">
+        <div class="card-title">🔔 AI Alerts for Today</div>
+        <div id="u-alerts"><div class="thinking"><div class="spinner"></div><p>AI generating your alerts...</p></div></div>
+      </div>
+    </div>
+
+    <!-- U-SCHEDULE -->
+    <div class="page" id="u-schedule">
+      <div class="greeting"><div class="greeting-h">Smart Schedule 📅</div><div class="greeting-s">AI-ranked time slots based on your cognitive forecast.</div></div>
+      <div class="card">
+        <div class="card-title">⏰ Best Times for Tasks Today</div>
+        <div id="u-slots"><div class="thinking"><div class="spinner"></div><p>Building your optimal schedule...</p></div></div>
+      </div>
+    </div>
+
+    <!-- U-TIPS -->
+    <div class="page" id="u-tips">
+      <div class="greeting"><div class="greeting-h">Recharge Tips 💡</div><div class="greeting-s">Personalized by your cognitive pattern today.</div></div>
+      <div id="u-tips-grid" class="g2"><div class="thinking" style="grid-column:span 2"><div class="spinner"></div><p>AI crafting your recharge plan...</p></div></div>
+    </div>
+
+    <!-- U-WEEK -->
+    <div class="page" id="u-week">
+      <div class="greeting"><div class="greeting-h">Weekly Trend 📈</div><div class="greeting-s">Your cognitive performance over 7 days.</div></div>
+      <div class="card">
+        <div class="card-title">🧠 Focus Score — Last 7 Days</div>
+        <div class="week-chart" id="u-week-chart"></div>
+      </div>
+      <div class="g3 mt15" id="u-week-stats"></div>
+    </div>
+
+    <!-- U-COACH -->
+    <div class="page" id="u-coach">
+      <div class="greeting"><div class="greeting-h">AI Cognitive Coach 🤖</div><div class="greeting-s">Personalized coaching generated by Claude AI — based on your current state.</div></div>
+      <div class="card">
+        <div class="card-title">🤖 Your Coaching Session</div>
+        <div id="u-coach-content"><div class="thinking"><div class="spinner"></div><p>AI coach preparing your session...</p></div></div>
+      </div>
+    </div>
+
+    <!-- ════════════ LEADER PAGES ════════════ -->
+
+    <!-- L-HOME -->
+    <div class="page" id="l-home">
+      <div class="greeting">
+        <div class="greeting-h">Team Cognitive Overview 🏢</div>
+        <div class="greeting-s" id="l-date">Loading team forecast...</div>
+      </div>
+      <div id="l-upgrade-banner"></div>
+      <div class="g4">
+        <div class="card stat-box"><div class="card-title" style="justify-content:center;font-size:0.6rem">Team Focus</div>
+          <div class="stat-num" id="l-focus" style="color:var(--cyan)">—</div><div class="stat-lbl" id="l-focus-sub">...</div></div>
+        <div class="card stat-box"><div class="card-title" style="justify-content:center;font-size:0.6rem">Avg Stress</div>
+          <div class="stat-num" id="l-stress" style="color:var(--green)">—</div><div class="stat-lbl" id="l-stress-sub">...</div></div>
+        <div class="card stat-box"><div class="card-title" style="justify-content:center;font-size:0.6rem">At-Risk</div>
+          <div class="stat-num" style="color:var(--storm)">2</div><div class="stat-lbl">Burnout pattern</div></div>
+        <div class="card stat-box"><div class="card-title" style="justify-content:center;font-size:0.6rem">Best Meeting</div>
+          <div class="stat-num" id="l-best" style="color:var(--blue);font-size:1.6rem">—</div><div class="stat-lbl">All members peak</div></div>
+      </div>
+      <div class="card mt15">
+        <div class="card-title">🌤️ Team Cognitive Forecast — Today</div>
+        <div class="tl-wrap"><div class="tl" id="l-tl"></div></div>
+        <div style="display:flex;gap:1.2rem;font-size:0.68rem;color:var(--fog);flex-wrap:wrap">
+          <span>🟦 Peak decisions</span><span>🟩 Good collab</span><span>🟨 Routine only</span><span>🟥 Avoid critical work</span>
+        </div>
+      </div>
+      <div class="card mt15">
+        <div class="card-title">🤖 AI Recommendations for Today</div>
+        <div id="l-recs"><div class="thinking"><div class="spinner"></div><p>AI analyzing team patterns...</p></div></div>
+      </div>
+    </div>
+
+    <!-- L-MEETINGS -->
+    <div class="page" id="l-meetings">
+      <div class="greeting"><div class="greeting-h">Smart Meeting Scheduler 📅</div><div class="greeting-s">AI-ranked windows based on collective cognitive readiness.</div></div>
+      <div class="card">
+        <div class="card-title">🧠 Best Windows for Your Team Today</div>
+        <div id="l-slots"><div class="thinking"><div class="spinner"></div><p>Building team schedule...</p></div></div>
+      </div>
+    </div>
+
+    <!-- L-ALERTS -->
+    <div class="page" id="l-alerts">
+      <div class="greeting"><div class="greeting-h">Cognitive Risk Alerts 🚨</div><div class="greeting-s">AI-detected patterns requiring your attention.</div></div>
+      <div id="l-alerts-content"><div class="thinking"><div class="spinner"></div><p>Scanning team cognitive patterns...</p></div></div>
+    </div>
+
+    <!-- L-TEAM -->
+    <div class="page" id="l-team">
+      <div class="greeting"><div class="greeting-h">Team Cognitive Scores 👥</div>
+        <div class="greeting-s">Anonymized scores. Leaders can edit session data to reflect real-world context.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">👥 Team Members — Current Cognitive State</div>
+        <div id="l-team-list"><div class="thinking"><div class="spinner"></div><p>Loading team data...</p></div></div>
+      </div>
+    </div>
+
+    <!-- L-FORECAST -->
+    <div class="page" id="l-forecast">
+      <div class="greeting"><div class="greeting-h">7-Day Cognitive Forecast 🔮</div><div class="greeting-s">Team-level cognitive weather for the week ahead.</div></div>
+      <div class="card"><div class="card-title">📆 Daily Forecast</div><div id="l-week-rows"></div></div>
+      <div class="card mt15"><div class="card-title">💡 Strategic AI Recommendations</div>
+        <div id="l-week-recs"><div class="thinking"><div class="spinner"></div><p>AI computing weekly strategy...</p></div></div>
+      </div>
+    </div>
+
+    <!-- L-BRIEFING -->
+    <div class="page" id="l-briefing">
+      <div class="greeting"><div class="greeting-h">AI Leadership Briefing 🤖</div><div class="greeting-s">Your daily cognitive intelligence briefing, auto-generated by Claude AI.</div></div>
+      <div class="card"><div class="card-title">🤖 Today's Leadership Briefing</div>
+        <div id="l-brief-content"><div class="thinking"><div class="spinner"></div><p>AI preparing your briefing...</p></div></div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /app-body -->
+
+<script>
+// ════════════════════════════════════════════
+//  SUPABASE + STATE
+// ════════════════════════════════════════════
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentUser   = null;
+let userProfile   = null;
+let currentView   = 'user';  // 'user' | 'leader'
+let cogState      = {};
+let loaded        = {};
+let teamSessions  = [];
+
+// ════════════════════════════════════════════
+//  BOOT — AUTH GUARD
+// ════════════════════════════════════════════
+(async () => {
+  const { data:{ session } } = await sb.auth.getSession();
+
+  if (!session) {
+    // Not logged in — check if demo mode via URL
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('demo') === '1') {
+      bootDemo();
+      return;
+    }
+    window.location.href = 'login.html';
+    return;
+  }
+
+  currentUser = session.user;
+
+  // Load profile
+  const { data: profile } = await sb
+    .from('profiles')
+    .select('*')
+    .eq('id', currentUser.id)
+    .single();
+
+  userProfile = profile || {
+    full_name: currentUser.email.split('@')[0],
+    role: 'user', plan: 'demo',
+    plan_expires_at: null
+  };
+
+  bootApp();
+})();
+
+function bootDemo() {
+  userProfile = { full_name:'Demo User', role:'user', plan:'demo' };
+  bootApp();
+}
+
+async function bootApp() {
+  const params   = new URLSearchParams(window.location.search);
+  const viewParam = params.get('view');
+
+  cogState = computeCognition();
+
+  // Set topbar
+  const initials = (userProfile.full_name||'?').split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('tbAvatar').textContent = initials;
+  document.getElementById('tbName').textContent   = userProfile.full_name || currentUser?.email;
+
+  const plan = userProfile.plan || 'demo';
+  const chipEl = document.getElementById('planChip');
+  chipEl.textContent = plan.charAt(0).toUpperCase() + plan.slice(1);
+  chipEl.className   = `plan-chip ${plan}`;
+
+  // Determine initial view
+  const role = userProfile.role;
+  if (viewParam === 'leader' || role === 'leader') {
+    setView('leader');
+    if (role === 'leader') {
+      document.getElementById('viewPills').style.display = 'flex';
+    }
+  } else {
+    setView('user');
+    if (role === 'leader') {
+      document.getElementById('viewPills').style.display = 'flex';
+    }
+  }
+
+  // Upgrade banner for demo users
+  if (plan === 'demo') {
+    const banner = `<div class="upgrade-banner">
+      <div class="upgrade-text">You're on the <strong>Free Demo</strong> — upgrade to unlock full AI features, team dashboard & more.</div>
+      <a href="pricing.html" class="upgrade-btn">Upgrade Now →</a>
+    </div>`;
+    document.getElementById('u-upgrade-banner').innerHTML = banner;
+    document.getElementById('l-upgrade-banner').innerHTML = banner;
+  }
+}
+
+// ════════════════════════════════════════════
+//  COGNITION ENGINE
+// ════════════════════════════════════════════
+function computeCognition() {
+  const now = new Date();
+  const h = now.getHours(), m = now.getMinutes(), dow = now.getDay();
+  const t = h + m/60;
+  const dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const isWeekend = dow===0||dow===6;
+
+  let focus, stress;
+  if(t<6){focus=30;stress=12}
+  else if(t<8){focus=42+(t-6)*10;stress=22}
+  else if(t<10){focus=65+(t-8)*9;stress=20}
+  else if(t<12){focus=83+(t-10)*4;stress=17}
+  else if(t<13.5){focus=89-(t-12)*12;stress=26}
+  else if(t<15){focus=71-(t-13.5)*13;stress=36}
+  else if(t<17){focus=52+(t-15)*7;stress=28}
+  else if(t<19){focus=66-(t-17)*6;stress=22}
+  else if(t<22){focus=56-(t-19)*9;stress=16}
+  else{focus=30;stress=10}
+
+  if(isWeekend){focus=Math.min(96,focus+8);stress=Math.max(8,stress-7)}
+  if(dow===1&&t<10){focus=Math.max(30,focus-10);stress+=8}
+
+  focus   = Math.max(25,Math.min(97,Math.round(focus+(Math.random()*6-3))));
+  stress  = Math.max(8, Math.min(72,Math.round(stress+(Math.random()*4-2))));
+  const fatigue = Math.max(10,Math.min(80,Math.round(58-focus*0.33+stress*0.42)));
+  const overall = Math.max(20,Math.min(98,Math.round(focus*0.58+(100-stress)*0.24+(100-fatigue)*0.18)));
+
+  const dipHour   = t<14?'2:30 PM':t<20?'8:00 PM':'Tomorrow 2:30 PM';
+  const peakWin   = t<11?'10:00–12:00 PM':t<16?'4:00–5:30 PM':'Tomorrow 10:00 AM';
+
+  let condIcon,condTitle,condBody;
+  if(focus>=80){condIcon='☀️';condTitle='High Focus — Clear Skies';condBody='Your brain is primed for deep work. Schedule demanding tasks and strategic thinking now.'}
+  else if(focus>=65){condIcon='⛅';condTitle='Moderate Focus — Partly Cloudy';condBody='Good for meetings and collaboration. Avoid solo deep work until your next peak window.'}
+  else if(focus>=50){condIcon='🌥️';condTitle='Low Focus — Overcast';condBody='Better for admin, emails, and light tasks. Avoid important decisions for now.'}
+  else{condIcon='🌩️';condTitle='Cognitive Storm — Rest Advised';condBody='Focus and energy are critically low. Take a break, walk, or do light refreshing tasks only.'}
+
+  let stateLabel,stateSub;
+  if(overall>=85){stateLabel='🌟 Peak State';stateSub='Top 10% of your week'}
+  else if(overall>=70){stateLabel='✅ High Performance';stateSub='Strong cognitive day'}
+  else if(overall>=55){stateLabel='⚡ Average State';stateSub='Normal performance'}
+  else{stateLabel='😴 Low Energy';stateSub='Rest and recovery advised'}
+
+  const hours=[];
+  for(let hh=7;hh<=22;hh++){
+    let f;
+    if(hh<8){f=45}else if(hh<10){f=65+(hh-8)*9}else if(hh<12){f=83+(hh-10)*4}
+    else if(hh<13.5){f=89-(hh-12)*12}else if(hh<15){f=71-(hh-13.5)*13}
+    else if(hh<17){f=52+(hh-15)*7}else if(hh<19){f=66-(hh-17)*6}else{f=52-(hh-19)*8}
+    if(isWeekend)f=Math.min(96,f+6);
+    hours.push({h:hh,f:Math.max(18,Math.min(97,Math.round(f))),isCurrent:hh===Math.floor(t)});
+  }
+
+  const weekScores=[];
+  for(let d=6;d>=0;d--){
+    const past=new Date(now);past.setDate(past.getDate()-d);
+    const pd=past.getDay();
+    let base=pd===0||pd===6?78:pd===1?68:pd===5?72:80;
+    weekScores.push({
+      day:d===0?'Today':d===1?'Yest':dayNames[pd].slice(0,3),
+      score:Math.max(40,Math.min(97,Math.round(base+(Math.random()*20-10)))),
+      isToday:d===0
+    });
+  }
+
+  return {
+    h,t,focus,stress,fatigue,overall,condIcon,condTitle,condBody,
+    stateLabel,stateSub,dipHour,peakWin,hours,weekScores,
+    dayName:dayNames[dow],isWeekend,
+    timeStr:now.toLocaleTimeString('en',{hour:'numeric',minute:'2-digit'}),
+    dateStr:now.toLocaleDateString('en',{weekday:'long',month:'long',day:'numeric'})
+  };
+}
+
+// ════════════════════════════════════════════
+//  VIEW SWITCHING
+// ════════════════════════════════════════════
+function setView(v) {
+  currentView = v;
+  const isUser = v==='user';
+  document.getElementById('sidebarUser').style.display   = isUser?'flex':'none';
+  document.getElementById('sidebarLeader').style.display = isUser?'none':'flex';
+  document.getElementById('pillUser').classList.toggle('active', isUser);
+  document.getElementById('pillLeader').classList.toggle('active', !isUser);
+
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+
+  if(isUser){
+    document.getElementById('u-home').classList.add('active');
+    document.querySelector('#sidebarUser .nav-btn').classList.add('active');
+    populateUserHome();
+  } else {
+    document.getElementById('l-home').classList.add('active');
+    document.querySelector('#sidebarLeader .nav-btn').classList.add('active');
+    populateLeaderHome();
+  }
+}
+
+// ════════════════════════════════════════════
+//  PAGE NAVIGATION
+// ════════════════════════════════════════════
+function showPage(id, btn, isUserSide) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  const sid = isUserSide?'sidebarUser':'sidebarLeader';
+  document.querySelectorAll('#'+sid+' .nav-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+
+  // Lazy load
+  if(id==='u-schedule' && !loaded['u-schedule'])   { loaded['u-schedule']=true;  buildUserSlots(); }
+  if(id==='u-tips'     && !loaded['u-tips'])        { loaded['u-tips']=true;      populateTips(); }
+  if(id==='u-week'     && !loaded['u-week'])        { loaded['u-week']=true;      buildWeekChart(); }
+  if(id==='u-coach'    && !loaded['u-coach'])       { loaded['u-coach']=true;     populateCoach(); }
+  if(id==='l-meetings' && !loaded['l-meetings'])    { loaded['l-meetings']=true;  buildLeaderSlots(); }
+  if(id==='l-alerts'   && !loaded['l-alerts'])      { loaded['l-alerts']=true;    populateAlerts(); }
+  if(id==='l-team')                                  { loadTeamScores(); }
+  if(id==='l-forecast' && !loaded['l-forecast'])    { loaded['l-forecast']=true;  buildForecast(); }
+  if(id==='l-briefing' && !loaded['l-briefing'])    { loaded['l-briefing']=true;  populateBriefing(); }
+}
+
+// ════════════════════════════════════════════
+//  CLAUDE AI CALL
+// ════════════════════════════════════════════
+async function callAI(prompt) {
+  if(!CLAUDE_API_KEY || CLAUDE_API_KEY.includes('YOUR')) return simulateAI(prompt);
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json',
+        'x-api-key':CLAUDE_API_KEY,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body:JSON.stringify({model:CLAUDE_MODEL,max_tokens:500,messages:[{role:'user',content:prompt}]})
+    });
+    const d = await r.json();
+    return d.content?.[0]?.text || simulateAI(prompt);
+  } catch { return simulateAI(prompt); }
+}
+
+function simulateAI(prompt) {
+  const c = cogState;
+  const good = c.focus>=70;
+  if(prompt.includes('personal alerts'))
+    return good
+      ? `🟢 PEAK WINDOW NOW — Focus at ${c.focus}%. Use the next 90 min for your most demanding work. This window ends around ${c.dipHour}.\n\n⚠️ UPCOMING DIP at ${c.dipHour} — Plan a 10-min break before then. Movement prevents the worst of it.\n\n💡 TODAY'S TIP — Stress is only ${c.stress}% — excellent conditions for creative and strategic thinking right now.`
+      : `⚠️ LOW FOCUS TODAY — Cognitive score is ${c.focus}%. Stick to emails, meetings, and light tasks for now.\n\n🌤️ RECOVERY WINDOW — Your next peak is predicted at ${c.peakWin}. Protect that time for anything critical.\n\n💤 STRESS NOTE — Elevated stress at ${c.stress}% is suppressing your focus by an estimated 12–18 points.`;
+
+  if(prompt.includes('recharge tips'))
+    return `SLEEP: ${c.focus<65?'Your pattern suggests mild sleep debt. A full 8 hours tonight will recover ~15 focus points.':'Sleep quality appears healthy. Maintain 7.5–8 hrs to sustain performance.'}\n\nMOVEMENT: Take a 10-minute walk at ${c.dipHour.split(' ')[0]}. Pre-emptive movement before a fatigue dip cuts crash depth by ~30%.\n\nSTRESS: ${c.stress>35?'Try box breathing (4-4-4-4) for 3 minutes before your next meeting. Clinically shown to reduce cortisol.':'Stress is healthy — avoid over-scheduling your afternoon to keep it that way.'}\n\nHYDRATION: Even mild dehydration (1–2%) drops cognitive output 13%. Keep water at your desk during your peak window.`;
+
+  if(prompt.includes('AI coach'))
+    return `Good ${c.h<12?'morning':c.h<17?'afternoon':'evening'}. Here's your personalized coaching for today:\n\nYour brain is at ${c.overall}/100 — ${c.stateLabel}. ${good?`Focus at ${c.focus}% means this is one of your stronger windows this week. I recommend front-loading your hardest work in the next 2 hours.`:`Energy is lower today (focus: ${c.focus}%). That's normal. The key is protecting your next recovery window at ${c.peakWin} for anything that truly matters.`}\n\nYour stress is ${c.stress}% — ${c.stress<30?'low and healthy, giving you clear decision-making capacity':'slightly elevated, which is reducing your cognitive efficiency. One mindful minute before your next task can help reset.'}.\n\nTop recommendation: ${good?`Block 90 minutes NOW for deep, uninterrupted work. Close notifications. This opportunity won't repeat until ${c.peakWin}.`:`Use this lower-energy period intentionally — batch your emails, attend routine meetings, and save everything important for ${c.peakWin}.`}`;
+
+  if(prompt.includes('team recs'))
+    return `✅ BEST WINDOW — Schedule all strategic decisions at ${c.peakWin}. Full team predicted at ~88/100 collective focus — ideal for sprint planning and performance reviews.\n\n⚠️ RESCHEDULE — Move any meetings currently at ${c.dipHour} to 4:15 PM. Team error rate is 4x higher in this window.\n\n🚨 BURNOUT WATCH — 2 members showing 6+ days of declining cognitive baseline. Schedule 1:1 check-ins this week before it becomes a retention issue.`;
+
+  if(prompt.includes('team alerts'))
+    return `🔴 HIGH RISK — Member A: Cognitive baseline declining 8 consecutive days. Burnout probability: 78%. Immediate workload review recommended.\n\n🟡 MODERATE RISK — Member B: Calendar at 140% healthy density for 2 weeks. Stress rising. Without action, full burnout in 12–18 days.\n\n🟡 SCHEDULING — Critical meeting at ${c.dipHour} is in a team cognitive dip. Move to 4:15 PM — saves an estimated 34% error reduction.\n\n🟢 POSITIVE — Team week-over-week focus up 11%. The schedule adjustments from last week are measurably working.`;
+
+  if(prompt.includes('weekly strategy'))
+    return `BEST DAY THIS WEEK — Tuesday. Team predicted at 91/100 focus. Ideal for product decisions, launches, or major reviews.\n\nAVOID — Friday after 1 PM. End-of-week fatigue detected across team. Reserve for wrap-up only.\n\nSCHEDULING WIN — Moving your Monday all-hands from 9 AM to 10:30 AM would align with the rising cognitive curve and add ~18 engagement points based on your team's pattern.`;
+
+  if(prompt.includes('leadership briefing'))
+    return `Good ${c.h<12?'morning':'afternoon'}, ${userProfile?.full_name?.split(' ')[0]||'Leader'}.\n\nTODAY'S COGNITIVE WEATHER: ${c.condTitle}. Team collective focus is at ${c.focus}%, stress at ${c.stress}%.\n\nTHREE PRIORITIES:\n1. Your peak team window is ${c.peakWin}. Block it for any strategic decisions, reviews, or launches.\n2. Two members are showing burnout signals. A 20-minute conversation this week prevents a 3-month productivity loss.\n3. Avoid scheduling critical work at ${c.dipHour} — team readiness drops to ~44/100.\n\nWEEK OUTLOOK: Tuesday is your strongest predicted day (91/100). Friday afternoon is weakest — protect it for light wrap-up tasks only.`;
+
+  return `Based on current state (focus: ${c.focus}%, stress: ${c.stress}%, score: ${c.overall}/100), here is my analysis: ${c.stateLabel}. Next optimal window: ${c.peakWin}. Watch for dip at ${c.dipHour}.`;
+}
+
+// ════════════════════════════════════════════
+//  TYPEWRITER
+// ════════════════════════════════════════════
+function typewrite(el, text, speed=16) {
+  el.textContent=''; let i=0;
+  el.classList.add('typing');
+  const iv=setInterval(()=>{
+    if(i<text.length){el.textContent+=text[i++]}
+    else{clearInterval(iv);el.classList.remove('typing')}
+  },speed);
+}
+
+function aiBox(textId) {
+  const d=document.createElement('div');
+  d.className='ai-box';
+  d.innerHTML=`<div class="ai-box-header"><span>🤖</span>AI Analysis</div><div class="ai-text" id="${textId}"></div>`;
+  return d;
+}
+
+// ════════════════════════════════════════════
+//  BUILD TIMELINE
+// ════════════════════════════════════════════
+function buildTimeline(id, hours) {
+  const el=document.getElementById(id);
+  el.innerHTML='';
+  hours.forEach(h=>{
+    const b=document.createElement('div');
+    b.className='tl-b'+(h.isCurrent?' tl-now':'');
+    const c=h.f>=80?'#1e6bff':h.f>=65?'#10b981':h.f>=50?'#f0b429':'#e84c4c';
+    b.style.cssText=`height:${h.f}%;background:${c};opacity:0.75`;
+    const tip=document.createElement('div');tip.className='tip';
+    tip.textContent=`${h.h>12?h.h-12:h.h}${h.h>=12?'pm':'am'}: ${h.f}%`;
+    const tl=document.createElement('div');tl.className='tl-t';
+    if([7,10,13,16,19,22].includes(h.h)) tl.textContent=(h.h>12?h.h-12+'p':h.h+'a');
+    b.appendChild(tip);b.appendChild(tl);el.appendChild(b);
+  });
+}
+
+// ════════════════════════════════════════════
+//  USER HOME
+// ════════════════════════════════════════════
+async function populateUserHome() {
+  const c=cogState;
+  const name=(userProfile?.full_name||'there').split(' ')[0];
+  document.getElementById('u-greeting').textContent=(c.h<12?'Good morning':'c.h<17'?'Good afternoon':'Good evening')+`, ${name} 👋`;
+  document.getElementById('u-greeting').textContent=(c.h<12?'Good morning':c.h<17?'Good afternoon':'Good evening')+` ${name} 👋`;
+  document.getElementById('u-date').textContent=c.dateStr+' · AI has analyzed your cognitive state';
+  document.getElementById('u-cond-icon').textContent=c.condIcon;
+  document.getElementById('u-cond-title').textContent=c.condTitle;
+  document.getElementById('u-cond-body').textContent=c.condBody;
+
+  const fc=c.focus>=70?'var(--blue)':c.focus>=55?'var(--gold)':'var(--storm)';
+  const sc=c.stress<30?'var(--green)':c.stress<50?'var(--gold)':'var(--storm)';
+  document.getElementById('u-focus-lbl').textContent=c.focus+'%';
+  document.getElementById('u-focus-lbl').style.color=fc;
+  document.getElementById('u-focus-bar').style.width=c.focus+'%';
+  document.getElementById('u-stress-lbl').textContent=c.stress+'%';
+  document.getElementById('u-stress-lbl').style.color=sc;
+  document.getElementById('u-stress-bar').style.width=c.stress+'%';
+  document.getElementById('u-stress-bar').style.background=sc;
+  const fatc=c.fatigue<30?'var(--green)':c.fatigue<55?'var(--gold)':'var(--storm)';
+  document.getElementById('u-fatigue-lbl').textContent=c.fatigue+'%';
+  document.getElementById('u-fatigue-lbl').style.color=fatc;
+  document.getElementById('u-fatigue-bar').style.width=c.fatigue+'%';
+  document.getElementById('u-fatigue-bar').style.background=fatc;
+
+  // Ring
+  const offset=251.2-(c.overall/100)*251.2;
+  setTimeout(()=>document.getElementById('u-ring').style.strokeDashoffset=offset,200);
+  document.getElementById('u-ring-num').textContent=c.overall;
+  document.getElementById('u-score-state').textContent=c.stateLabel;
+  document.getElementById('u-score-sub').textContent=c.stateSub;
+
+  buildTimeline('u-tl',c.hours);
+
+  // AI alerts
+  const text=await callAI(`Generate 3 concise personal cognitive alerts for a user. State: focus ${c.focus}%, stress ${c.stress}%, fatigue ${c.fatigue}%, dip at ${c.dipHour}, peak at ${c.peakWin}. Each alert 2-3 lines. Use emoji labels: 🟢 good, ⚠️ warning, 💡 tip. Be specific.`);
+  const alertsEl=document.getElementById('u-alerts');alertsEl.innerHTML='';
+  const box=aiBox('u-alerts-text');alertsEl.appendChild(box);
+  typewrite(document.getElementById('u-alerts-text'),text);
+}
+
+// ════════════════════════════════════════════
+//  USER SLOTS
+// ════════════════════════════════════════════
+function buildUserSlots() {
+  const c=cogState;
+  const slots=[
+    {time:c.h<12?'Now':'Best',title:'Deep Work / Analysis / Creative',sub:`Focus ${c.focus}% — best cognitive window`,color:'var(--green)',bg:'rgba(16,185,129,0.08)',bc:'rgba(16,185,129,0.25)',badge:'⭐ BEST'},
+    {time:c.peakWin.split('–')[0],title:'Meetings / Collaboration',sub:'High collective focus — great for decisions',color:'var(--blue)',bg:'rgba(30,107,255,0.07)',bc:'rgba(30,107,255,0.2)',badge:'GREAT'},
+    {time:'After Lunch',title:'Admin / Emails / Routine',sub:'Moderate focus — low-cognitive work',color:'var(--gold)',bg:'rgba(240,180,41,0.06)',bc:'rgba(240,180,41,0.2)',badge:'OK'},
+    {time:c.dipHour,title:'⚠️ Avoid: Decisions / Complex Work',sub:'Fatigue dip — error risk 4x higher',color:'var(--storm)',bg:'rgba(232,76,76,0.07)',bc:'rgba(232,76,76,0.2)',badge:'AVOID'},
+    {time:'4:00 PM',title:'Planning / Light Reviews',sub:'Recovery window — cognitive energy returns',color:'var(--cyan)',bg:'rgba(0,198,224,0.06)',bc:'rgba(0,198,224,0.18)',badge:'GOOD'},
+  ];
+  const el=document.getElementById('u-slots');el.innerHTML='';
+  slots.forEach(s=>{
+    const d=document.createElement('div');d.className='slot';
+    d.style.cssText=`background:${s.bg};border-color:${s.bc}`;
+    d.innerHTML=`<span class="slot-time" style="color:${s.color}">${s.time}</span>
+      <div class="slot-info"><div class="slot-title">${s.title}</div><div class="slot-sub">${s.sub}</div></div>
+      <span class="slot-badge" style="background:${s.bg};color:${s.color};border:1px solid ${s.bc}">${s.badge}</span>`;
+    el.appendChild(d);
+  });
+}
+
+// ════════════════════════════════════════════
+//  RECHARGE TIPS
+// ════════════════════════════════════════════
+async function populateTips() {
+  const c=cogState;
+  const text=await callAI(`4 personalized recharge tips for: focus ${c.focus}%, stress ${c.stress}%, time ${c.timeStr}, day ${c.dayName}. Cover SLEEP, MOVEMENT, STRESS, HYDRATION in that order. 2-3 sentences each. Start each section with the category name in caps followed by a colon.`);
+  const el=document.getElementById('u-tips-grid');el.innerHTML='';
+  const sections=text.split(/\n\n/).filter(s=>s.trim());
+  const icons=['😴','🏃','🧘','💧'];
+  sections.slice(0,4).forEach((s,i)=>{
+    const card=document.createElement('div');card.className='card';
+    const lines=s.split('\n');
+    const header=lines[0].split(':')[0]||`Tip ${i+1}`;
+    card.innerHTML=`<div class="card-title">${icons[i]} ${header}</div>
+      <div class="a-good alert"><span class="a-ico">💡</span>
+        <div class="a-body" style="color:var(--text)">${lines.slice(1).join(' ')||s}</div>
+      </div>`;
+    el.appendChild(card);
+  });
+  if(!el.children.length){
+    el.innerHTML=`<div class="card" style="grid-column:span 2">${text}</div>`;
+  }
+}
+
+// ════════════════════════════════════════════
+//  WEEK CHART
+// ════════════════════════════════════════════
+function buildWeekChart() {
+  const el=document.getElementById('u-week-chart');el.innerHTML='';
+  cogState.weekScores.forEach(d=>{
+    const col=document.createElement('div');col.className='wc-col';
+    const bar=document.createElement('div');bar.className='wc-bar';
+    bar.style.cssText=`height:${d.score}%;background:${d.isToday?'linear-gradient(180deg,var(--cyan),var(--blue))':'rgba(30,107,255,0.3)'};transition:height 0.8s ease`;
+    const sc=document.createElement('div');sc.className='wc-score';
+    sc.style.color=d.isToday?'var(--cyan)':'var(--fog)';sc.textContent=d.score;
+    const lbl=document.createElement('div');lbl.className='wc-day';lbl.textContent=d.day;
+    col.appendChild(bar);col.appendChild(sc);col.appendChild(lbl);el.appendChild(col);
+  });
+  const avg=Math.round(cogState.weekScores.reduce((a,b)=>a+b.score,0)/cogState.weekScores.length);
+  const peak=cogState.weekScores.reduce((a,b)=>a.score>b.score?a:b);
+  const c=cogState;
+  document.getElementById('u-week-stats').innerHTML=`
+    <div class="card stat-box"><div class="card-title" style="justify-content:center">Peak Day</div>
+      <div class="stat-num" style="color:var(--cyan);font-size:1.8rem">${peak.day}</div><div class="stat-lbl">Score: ${peak.score}/100</div></div>
+    <div class="card stat-box"><div class="card-title" style="justify-content:center">7-Day Avg</div>
+      <div class="stat-num" style="color:var(--blue)">${avg}</div><div class="stat-lbl">+5 vs last week</div></div>
+    <div class="card stat-box"><div class="card-title" style="justify-content:center">Burnout Risk</div>
+      <div class="stat-num" style="color:${c.stress<30?'var(--green)':c.stress<50?'var(--gold)':'var(--storm)'}">${c.stress<30?'Low':c.stress<50?'Mod':'High'}</div>
+      <div class="stat-lbl">Trend stable</div></div>`;
+}
+
+// ════════════════════════════════════════════
+//  AI COACH
+// ════════════════════════════════════════════
+async function populateCoach() {
+  const c=cogState;
+  const text=await callAI(`You are a cognitive performance coach. User: focus ${c.focus}%, stress ${c.stress}%, fatigue ${c.fatigue}%, overall ${c.overall}/100, time ${c.timeStr}, ${c.dayName}, dip at ${c.dipHour}, peak at ${c.peakWin}. Write a 180-word personal coaching session. Include specific time-based advice. Warm, direct, insightful tone.`);
+  const el=document.getElementById('u-coach-content');el.innerHTML='';
+  const box=aiBox('u-coach-text');el.appendChild(box);
+  typewrite(document.getElementById('u-coach-text'),text,14);
+}
+
+// ════════════════════════════════════════════
+//  LEADER HOME
+// ════════════════════════════════════════════
+async function populateLeaderHome() {
+  const c=cogState;
+  document.getElementById('l-date').textContent=c.dateStr+' · Engineering Team (8 members)';
+  document.getElementById('l-focus').textContent=Math.min(97,c.focus+3)+'%';
+  document.getElementById('l-focus-sub').textContent='↑ 6% from yesterday';
+  document.getElementById('l-stress').textContent=c.stress<30?'Low':c.stress<50?'Moderate':'High';
+  document.getElementById('l-stress-sub').textContent=c.stress<30?'6 of 8 below threshold':'Monitor 2 members';
+  document.getElementById('l-best').textContent=c.peakWin.split('–')[0].trim();
+  buildTimeline('l-tl',c.hours);
+
+  const text=await callAI(`3 AI recommendations for a team leader. Team: focus ${c.focus}%, stress ${c.stress}%, best window ${c.peakWin}, dip ${c.dipHour}. One good scheduling window, one warning, one burnout alert. Use emojis. Specific and concise.`);
+  const recsEl=document.getElementById('l-recs');recsEl.innerHTML='';
+  const box=aiBox('l-recs-text');recsEl.appendChild(box);
+  typewrite(document.getElementById('l-recs-text'),text);
+}
+
+// ════════════════════════════════════════════
+//  LEADER SLOTS
+// ════════════════════════════════════════════
+function buildLeaderSlots() {
+  const c=cogState;
+  const slots=[
+    {time:c.peakWin.split('–')[0],title:'Strategic Decisions / Sprint Planning / Reviews',sub:'100% of team in peak · Collective score ~88/100',color:'var(--green)',bg:'rgba(16,185,129,0.08)',bc:'rgba(16,185,129,0.28)',badge:'⭐ IDEAL'},
+    {time:'9:00 AM',title:'Kickoff Meetings / Team Alignment',sub:'Good collective focus · 6 of 8 at high readiness',color:'var(--blue)',bg:'rgba(30,107,255,0.07)',bc:'rgba(30,107,255,0.2)',badge:'GOOD'},
+    {time:'1:30 PM',title:'Status Updates / Routine Check-ins',sub:'Moderate score ~61/100 · Low-stakes only',color:'var(--gold)',bg:'rgba(240,180,41,0.06)',bc:'rgba(240,180,41,0.2)',badge:'MODERATE'},
+    {time:c.dipHour,title:'⚠️ Avoid: Code Reviews / Critical Decisions / Hiring',sub:'Team dip · Error rate 4x baseline · Reschedule',color:'var(--storm)',bg:'rgba(232,76,76,0.07)',bc:'rgba(232,76,76,0.2)',badge:'AVOID'},
+    {time:'4:15 PM',title:'Light Meetings / Planning / Async Reviews',sub:'Recovery window — team energy returns',color:'var(--cyan)',bg:'rgba(0,198,224,0.06)',bc:'rgba(0,198,224,0.18)',badge:'GOOD'},
+  ];
+  const el=document.getElementById('l-slots');el.innerHTML='';
+  slots.forEach(s=>{
+    const d=document.createElement('div');d.className='slot';
+    d.style.cssText=`background:${s.bg};border-color:${s.bc}`;
+    d.innerHTML=`<span class="slot-time" style="color:${s.color}">${s.time}</span>
+      <div class="slot-info"><div class="slot-title">${s.title}</div><div class="slot-sub">${s.sub}</div></div>
+      <span class="slot-badge" style="background:${s.bg};color:${s.color};border:1px solid ${s.bc}">${s.badge}</span>`;
+    el.appendChild(d);
+  });
+}
+
+// ════════════════════════════════════════════
+//  LEADER ALERTS
+// ════════════════════════════════════════════
+async function populateAlerts() {
+  const c=cogState;
+  const text=await callAI(`4 cognitive risk alerts for a team leader. Team: focus ${c.focus}%, stress ${c.stress}%, 2 at-risk, dip at ${c.dipHour}. Use 🔴 high, 🟡 moderate, 🟢 positive. Include: burnout risk x2, scheduling risk, positive trend. Member names: "Member A" and "Member B". 3-4 lines each.`);
+  const el=document.getElementById('l-alerts-content');el.innerHTML='';
+  const card=document.createElement('div');card.className='card';
+  card.innerHTML=`<div class="card-title">🚨 AI Risk Analysis</div>`;
+  const box=aiBox('l-alerts-text');card.appendChild(box);el.appendChild(card);
+  typewrite(document.getElementById('l-alerts-text'),text);
+}
+
+// ════════════════════════════════════════════
+//  TEAM SCORES — loads from Supabase, fallback to demo
+// ════════════════════════════════════════════
+async function loadTeamScores() {
+  const el=document.getElementById('l-team-list');
+  el.innerHTML='<div class="thinking"><div class="spinner"></div><p>Loading team data from database...</p></div>';
+
+  // Try to load real sessions from Supabase
+  if(currentUser) {
+    const { data, error } = await sb
+      .from('sessions')
+      .select('*')
+      .eq('leader_id', currentUser.id)
+      .eq('session_date', new Date().toISOString().split('T')[0]);
+
+    if(!error && data && data.length>0) {
+      teamSessions=data;
+      renderTeamRows(data);
+      return;
+    }
+  }
+
+  // Fallback: demo data with computed scores
+  const c=cogState;
+  const demo=[
+    {id:'demo-1',member_name:'Member A',role:'Frontend Engineer',focus_score:Math.max(35,c.focus-45),stress_score:65,fatigue_score:70,overall_score:38,condition_label:'At Risk'},
+    {id:'demo-2',member_name:'Member B',role:'Backend Engineer',focus_score:Math.max(45,c.focus-30),stress_score:48,fatigue_score:55,overall_score:50,condition_label:'Tired'},
+    {id:'demo-3',member_name:'Member C',role:'Product Designer',focus_score:Math.min(97,c.focus+7),stress_score:18,fatigue_score:20,overall_score:88,condition_label:'Peak'},
+    {id:'demo-4',member_name:'Member D',role:'Data Scientist',focus_score:Math.min(95,c.focus+2),stress_score:22,fatigue_score:25,overall_score:81,condition_label:'High'},
+    {id:'demo-5',member_name:'Member E',role:'QA Engineer',focus_score:Math.min(90,c.focus-5),stress_score:28,fatigue_score:30,overall_score:74,condition_label:'Good'},
+    {id:'demo-6',member_name:'Member F',role:'DevOps',focus_score:Math.min(97,c.focus+10),stress_score:15,fatigue_score:18,overall_score:91,condition_label:'Peak'},
+    {id:'demo-7',member_name:'Member G',role:'Scrum Master',focus_score:Math.max(50,c.focus-12),stress_score:32,fatigue_score:40,overall_score:65,condition_label:'OK'},
+    {id:'demo-8',member_name:'Member H',role:'Full-Stack Eng',focus_score:Math.min(94,c.focus+4),stress_score:20,fatigue_score:22,overall_score:84,condition_label:'High'},
+  ];
+  teamSessions=demo;
+  renderTeamRows(demo);
+}
+
+function renderTeamRows(sessions) {
+  const el=document.getElementById('l-team-list');el.innerHTML='';
+  const avColors=['#3b82f6','#8b5cf6','#ec4899','#f97316','#10b981','#06b6d4','#84cc16','#f59e0b'];
+  sessions.forEach((s,i)=>{
+    const sc=s.overall_score>=80?'var(--green)':s.overall_score>=60?'var(--blue)':s.overall_score>=45?'var(--gold)':'var(--storm)';
+    const initials=s.member_name.split(' ').map(x=>x[0]).join('');
+    const row=document.createElement('div');row.className='team-row';
+    row.innerHTML=`
+      <div class="tr-av" style="background:${avColors[i%8]}">${initials}</div>
+      <div style="flex:1">
+        <div class="tr-name">${s.member_name}</div>
+        <div class="tr-role">${s.role||'Team Member'}</div>
+      </div>
+      <div style="font-size:0.72rem;color:var(--fog);text-align:right;margin-right:0.5rem">
+        <div>F: ${s.focus_score}%</div>
+        <div>S: ${s.stress_score}%</div>
+      </div>
+      <div class="tr-score" style="color:${sc}">${s.overall_score}</div>
+      <span class="tr-badge" style="background:${sc}18;color:${sc};border:1px solid ${sc}40">${s.condition_label}</span>
+      <button class="tr-edit-btn" onclick="openEditModal('${s.id}','${s.member_name}',${s.focus_score},${s.stress_score},${s.fatigue_score},'${s.notes||''}')">✏️ Edit</button>`;
+    el.appendChild(row);
+  });
+}
+
+// ════════════════════════════════════════════
+//  EDIT SESSION MODAL
+// ════════════════════════════════════════════
+function openEditModal(id, name, focus, stress, fatigue, notes) {
+  document.getElementById('editSessionId').value=id;
+  document.getElementById('editName').value=name;
+  document.getElementById('editFocus').value=focus;
+  document.getElementById('editFocusVal').textContent=focus;
+  document.getElementById('editStress').value=stress;
+  document.getElementById('editStressVal').textContent=stress;
+  document.getElementById('editFatigue').value=fatigue;
+  document.getElementById('editFatigueVal').textContent=fatigue;
+  document.getElementById('editNotes').value=notes||'';
+  document.getElementById('editModal').classList.add('show');
+}
+function closeEditModal() { document.getElementById('editModal').classList.remove('show'); }
+
+async function saveSession() {
+  const id=document.getElementById('editSessionId').value;
+  const focus=+document.getElementById('editFocus').value;
+  const stress=+document.getElementById('editStress').value;
+  const fatigue=+document.getElementById('editFatigue').value;
+  const notes=document.getElementById('editNotes').value;
+  const overall=Math.round(focus*0.58+(100-stress)*0.24+(100-fatigue)*0.18);
+  const label=overall>=80?'Peak':overall>=65?'High':overall>=50?'Good':overall>=40?'Tired':'At Risk';
+
+  // Update in Supabase if real session
+  if(!id.startsWith('demo') && currentUser) {
+    await sb.from('sessions').update({
+      focus_score:focus, stress_score:stress, fatigue_score:fatigue,
+      overall_score:overall, condition_label:label, notes,
+      updated_at:new Date().toISOString()
+    }).eq('id',id);
+  }
+
+  // Update local demo data
+  const idx=teamSessions.findIndex(s=>s.id===id);
+  if(idx>=0){
+    teamSessions[idx]={...teamSessions[idx],focus_score:focus,stress_score:stress,
+      fatigue_score:fatigue,overall_score:overall,condition_label:label,notes};
+  }
+
+  closeEditModal();
+  renderTeamRows(teamSessions);
+  showToast(`✅ ${document.getElementById('editName').value}'s session updated`);
+}
+
+// ════════════════════════════════════════════
+//  WEEK FORECAST
+// ════════════════════════════════════════════
+async function buildForecast() {
+  const el=document.getElementById('l-week-rows');el.innerHTML='';
+  const c=cogState;
+  const now=new Date();
+  const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const scores=[82,68,91,78,c.overall,74,70];
+  for(let d=0;d<7;d++){
+    const date=new Date(now);date.setDate(now.getDate()+d);
+    const dow=date.getDay();
+    const s=Math.max(50,Math.min(97,(scores[d]+(Math.random()*8-4))|0));
+    const icon=s>=85?'☀️':s>=70?'⛅':s>=55?'🌥️':'🌩️';
+    const color=s>=85?'var(--green)':s>=70?'var(--blue)':s>=55?'var(--gold)':'var(--storm)';
+    const label=s>=85?'Peak':s>=70?'Good':'Moderate';
+    const rec=d===0?'Today — current analysis':dow===1?'Easy start — avoid launches':dow===2?'⭐ Best for big decisions':dow===5?'Wrap-up only':'Standard workload';
+    const row=document.createElement('div');row.className='wf-row';
+    row.innerHTML=`<span class="wf-ico">${icon}</span>
+      <span class="wf-day">${d===0?'Today ('+days[dow]+')':days[dow]+' '+date.getDate()}</span>
+      <span class="wf-rec">${rec}</span>
+      <div><div class="wf-score" style="color:${color}">${s}</div><div class="wf-lbl">${label}</div></div>`;
+    el.appendChild(row);
+  }
+  const text=await callAI(`2 strategic weekly recommendations for a team leader. Today ${c.dayName}, focus ${c.focus}%. Best day and worst day this week. One scheduling improvement tip. Specific and brief. Use emojis.`);
+  const recsEl=document.getElementById('l-week-recs');recsEl.innerHTML='';
+  const box=aiBox('l-week-text');recsEl.appendChild(box);
+  typewrite(document.getElementById('l-week-text'),text);
+}
+
+// ════════════════════════════════════════════
+//  LEADERSHIP BRIEFING
+// ════════════════════════════════════════════
+async function populateBriefing() {
+  const c=cogState;
+  const name=userProfile?.full_name?.split(' ')[0]||'Leader';
+  const text=await callAI(`Leadership briefing for ${name}. Team: focus ${c.focus}%, stress ${c.stress}%, ${c.dayName} ${c.timeStr}, 2 burnout risk, peak ${c.peakWin}, avoid ${c.dipHour}. Write a 200-word executive briefing: team condition, 3 priority actions, week outlook. Professional, data-driven, direct.`);
+  const el=document.getElementById('l-brief-content');el.innerHTML='';
+  const box=aiBox('l-brief-text');el.appendChild(box);
+  typewrite(document.getElementById('l-brief-text'),text,12);
+}
+
+// ════════════════════════════════════════════
+//  UTILS
+// ════════════════════════════════════════════
+function showToast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3500);
+}
+
+async function signOut() {
+  await sb.auth.signOut();
+  window.location.href='login.html';
+}
+</script>
+</body>
+</html>

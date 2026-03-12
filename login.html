@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NeuroWeather — Login</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌤️</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<style>
+:root {
+  --ink: #07101f;
+  --blue: #1e6bff;
+  --cyan: #00c6e0;
+  --green: #10b981;
+  --storm: #e84c4c;
+  --gold: #f0b429;
+  --fog: #8ea8c3;
+  --text: #c9ddf0;
+  --white: #fff;
+  --border: rgba(255,255,255,0.08);
+  --card: rgba(13,31,60,0.9);
+  --input-bg: rgba(255,255,255,0.04);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+
+body {
+  background: var(--ink);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 300;
+  display: flex;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* LEFT PANEL */
+.left {
+  flex: 1;
+  background: linear-gradient(135deg, #07101f 0%, #0d1f3c 50%, #091628 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 4rem;
+  position: relative;
+  overflow: hidden;
+  border-right: 1px solid var(--border);
+}
+.left-glow {
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 50% at 30% 30%, rgba(30,107,255,0.12), transparent 60%),
+    radial-gradient(ellipse 50% 40% at 70% 70%, rgba(0,198,224,0.07), transparent 60%);
+}
+.left-grid {
+  position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(0,198,224,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,198,224,0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+.brand {
+  display: flex; align-items: center; gap: 0.6rem;
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: 1.6rem; color: var(--white);
+  text-decoration: none; margin-bottom: 4rem;
+}
+.brand em { color: var(--cyan); font-style: normal; }
+
+.left-tagline {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+  font-weight: 700; color: var(--white);
+  line-height: 1.15; letter-spacing: -0.02em;
+  margin-bottom: 1.2rem;
+}
+.left-tagline em {
+  font-family: 'Instrument Serif', serif;
+  font-style: italic; color: var(--cyan); font-weight: 400;
+}
+.left-sub {
+  font-size: 1rem; color: var(--fog);
+  line-height: 1.8; max-width: 420px; margin-bottom: 3rem;
+}
+
+.left-stats {
+  display: flex; gap: 2rem; flex-wrap: wrap;
+}
+.l-stat { text-align: left; }
+.l-stat-n {
+  font-family: 'Syne', sans-serif; font-weight: 800;
+  font-size: 2rem; color: var(--white); display: block;
+  line-height: 1; margin-bottom: 0.3rem;
+}
+.l-stat-n em { color: var(--cyan); font-style: normal; }
+.l-stat-l { font-size: 0.72rem; color: var(--fog); line-height: 1.4; }
+
+/* Live widget on left */
+.live-widget {
+  margin-top: 3rem;
+  background: rgba(13, 31, 60, 0.7);
+  border: 1px solid rgba(0, 198, 224, 0.2);
+  border-radius: 16px;
+  padding: 1.2rem 1.5rem;
+  max-width: 420px;
+  backdrop-filter: blur(10px);
+}
+.lw-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 1rem; padding-bottom: 0.8rem;
+  border-bottom: 1px solid var(--border);
+}
+.lw-title { font-size: 0.65rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--fog); font-weight: 600; }
+.lw-live { display: flex; align-items: center; gap: 0.35rem; font-size: 0.62rem; color: var(--cyan); font-weight: 600; }
+.lw-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--cyan); animation: blink 1.5s ease infinite; }
+@keyframes blink { 0%,100%{opacity:1}50%{opacity:0.2} }
+.lw-metrics { display: flex; gap: 1rem; }
+.lw-m { flex: 1; }
+.lw-label { font-size: 0.58rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--fog); margin-bottom: 0.3rem; }
+.lw-val { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1.3rem; line-height: 1; }
+.lw-bar { height: 2px; background: rgba(255,255,255,0.06); border-radius:1px; margin-top:0.4rem; overflow:hidden; }
+.lw-fill { height: 100%; border-radius: 1px; }
+
+/* RIGHT PANEL */
+.right {
+  width: 480px; flex-shrink: 0;
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: center;
+  padding: 3rem 3.5rem;
+  background: rgba(7, 16, 31, 0.95);
+}
+
+.form-header { text-align: center; margin-bottom: 2.5rem; width: 100%; }
+.form-title {
+  font-family: 'Syne', sans-serif; font-weight: 700;
+  font-size: 1.6rem; color: var(--white);
+  margin-bottom: 0.5rem;
+}
+.form-sub { font-size: 0.88rem; color: var(--fog); line-height: 1.6; }
+
+/* TABS */
+.tabs {
+  display: flex; background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border); border-radius: 12px;
+  padding: 4px; margin-bottom: 2rem; width: 100%;
+}
+.tab {
+  flex: 1; padding: 0.6rem; border-radius: 9px;
+  font-size: 0.82rem; font-weight: 500;
+  background: transparent; border: none;
+  color: var(--fog); cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  transition: background 0.2s, color 0.2s;
+}
+.tab.active { background: rgba(30,107,255,0.2); color: var(--cyan); }
+
+/* FORM */
+.form-box { width: 100%; }
+.field { margin-bottom: 1.2rem; }
+.field label {
+  display: block; font-size: 0.78rem; font-weight: 500;
+  color: var(--fog); margin-bottom: 0.5rem; letter-spacing: 0.04em;
+}
+.field input, .field select {
+  width: 100%; background: var(--input-bg);
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: 0.85rem 1rem; color: var(--white);
+  font-family: 'DM Sans', sans-serif; font-size: 0.9rem;
+  transition: border-color 0.2s, background 0.2s;
+  outline: none; appearance: none;
+}
+.field input:focus, .field select:focus {
+  border-color: rgba(0,198,224,0.4);
+  background: rgba(0,198,224,0.04);
+}
+.field input::placeholder { color: rgba(142,168,195,0.4); }
+.field select option { background: #0d1f3c; }
+
+/* Password toggle */
+.pw-wrap { position: relative; }
+.pw-wrap input { padding-right: 3rem; }
+.pw-toggle {
+  position: absolute; right: 1rem; top: 50%;
+  transform: translateY(-50%); background: none;
+  border: none; color: var(--fog); cursor: pointer;
+  font-size: 1rem; padding: 0;
+}
+
+/* Role selector */
+.role-select {
+  display: flex; gap: 0.7rem; margin-bottom: 1.2rem;
+}
+.role-opt {
+  flex: 1; padding: 0.85rem 0.5rem;
+  background: var(--input-bg); border: 1.5px solid var(--border);
+  border-radius: 10px; cursor: pointer; text-align: center;
+  transition: border-color 0.2s, background 0.2s;
+}
+.role-opt:hover { border-color: rgba(0,198,224,0.3); }
+.role-opt.selected { border-color: var(--cyan); background: rgba(0,198,224,0.06); }
+.role-opt-icon { font-size: 1.4rem; display: block; margin-bottom: 0.3rem; }
+.role-opt-label { font-size: 0.75rem; font-weight: 500; color: var(--text); }
+.role-opt-sub { font-size: 0.65rem; color: var(--fog); margin-top: 0.15rem; }
+
+/* Plan badge (signup only) */
+.plan-badge {
+  display: flex; align-items: center; gap: 0.7rem;
+  background: rgba(30,107,255,0.08); border: 1px solid rgba(30,107,255,0.2);
+  border-radius: 10px; padding: 0.8rem 1rem;
+  margin-bottom: 1.2rem; font-size: 0.82rem;
+}
+.plan-badge-icon { font-size: 1.2rem; }
+.plan-badge-text { color: var(--text); flex: 1; }
+.plan-badge-text strong { color: var(--white); }
+.plan-change { font-size: 0.72rem; color: var(--cyan); text-decoration: none; cursor: pointer; }
+
+/* Submit button */
+.btn-submit {
+  width: 100%; padding: 0.95rem;
+  background: linear-gradient(135deg, var(--blue), var(--cyan));
+  color: #fff; border: none; border-radius: 10px;
+  font-family: 'DM Sans', sans-serif; font-size: 0.95rem; font-weight: 500;
+  cursor: pointer; margin-top: 0.5rem;
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+  letter-spacing: 0.03em; position: relative; overflow: hidden;
+}
+.btn-submit:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(30,107,255,0.35); }
+.btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-loading { display: none; }
+
+/* Divider */
+.divider {
+  display: flex; align-items: center; gap: 1rem;
+  margin: 1.5rem 0; color: var(--fog); font-size: 0.75rem;
+}
+.divider::before, .divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+
+/* Demo button */
+.btn-demo {
+  width: 100%; padding: 0.85rem;
+  background: transparent; border: 1px solid var(--border);
+  color: var(--fog); border-radius: 10px;
+  font-family: 'DM Sans', sans-serif; font-size: 0.88rem;
+  cursor: pointer; transition: border-color 0.2s, color 0.2s;
+  text-decoration: none; display: block; text-align: center;
+}
+.btn-demo:hover { border-color: var(--cyan); color: var(--cyan); }
+
+/* Error / success */
+.msg {
+  border-radius: 10px; padding: 0.85rem 1rem;
+  font-size: 0.82rem; margin-bottom: 1rem;
+  display: none; line-height: 1.5;
+}
+.msg.error { background: rgba(232,76,76,0.1); border: 1px solid rgba(232,76,76,0.25); color: #ff8080; }
+.msg.success { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.25); color: #6ee7b7; }
+.msg.show { display: block; }
+
+/* Forgot password */
+.forgot {
+  font-size: 0.75rem; color: var(--fog); text-align: right;
+  display: block; margin-top: -0.7rem; margin-bottom: 1.2rem;
+  cursor: pointer; text-decoration: none; transition: color 0.2s;
+}
+.forgot:hover { color: var(--cyan); }
+
+/* Footer note */
+.form-foot {
+  text-align: center; margin-top: 1.5rem;
+  font-size: 0.72rem; color: var(--fog); line-height: 1.6;
+}
+.form-foot a { color: var(--cyan); text-decoration: none; }
+
+/* Password strength */
+.pw-strength { margin-top: 0.4rem; display: flex; gap: 3px; }
+.pw-bar { flex: 1; height: 3px; border-radius: 2px; background: rgba(255,255,255,0.08); transition: background 0.3s; }
+.pw-bar.weak { background: var(--storm); }
+.pw-bar.fair { background: var(--gold); }
+.pw-bar.good { background: var(--cyan); }
+.pw-bar.strong { background: var(--green); }
+
+/* Responsive */
+@media (max-width: 900px) {
+  body { flex-direction: column; }
+  .left { padding: 2rem; border-right: none; border-bottom: 1px solid var(--border); min-height: auto; }
+  .right { width: 100%; padding: 2rem 1.5rem; }
+  .live-widget { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- LEFT PANEL -->
+<div class="left">
+  <div class="left-glow"></div>
+  <div class="left-grid"></div>
+
+  <a href="index.html" class="brand">🌤️ Neuro<em>Weather</em></a>
+
+  <div class="left-tagline">
+    The cognitive<br><em>weather forecast</em><br>for your organization
+  </div>
+  <p class="left-sub">
+    AI that automatically predicts your team's focus, stress, and mental readiness —
+    so you always know when to act, decide, and rest.
+  </p>
+
+  <div class="left-stats">
+    <div class="l-stat">
+      <span class="l-stat-n">$<em>1T</em>+</span>
+      <span class="l-stat-l">Lost yearly to<br>cognitive misalignment</span>
+    </div>
+    <div class="l-stat">
+      <span class="l-stat-n"><em>28</em>%</span>
+      <span class="l-stat-l">Productivity gain with<br>cognitive scheduling</span>
+    </div>
+    <div class="l-stat">
+      <span class="l-stat-n"><em>4×</em></span>
+      <span class="l-stat-l">Fewer errors with<br>AI-timed decisions</span>
+    </div>
+  </div>
+
+  <div class="live-widget">
+    <div class="lw-header">
+      <span class="lw-title">🏢 Live Cognitive Snapshot</span>
+      <span class="lw-live"><span class="lw-dot"></span> AI Active</span>
+    </div>
+    <div class="lw-metrics">
+      <div class="lw-m">
+        <div class="lw-label">Focus</div>
+        <div class="lw-val" id="lw-focus" style="color:#1e6bff">—</div>
+        <div class="lw-bar"><div class="lw-fill" id="lw-focus-bar" style="width:0%;background:linear-gradient(90deg,#1e6bff,#00c6e0)"></div></div>
+      </div>
+      <div class="lw-m">
+        <div class="lw-label">Stress</div>
+        <div class="lw-val" id="lw-stress" style="color:#10b981">—</div>
+        <div class="lw-bar"><div class="lw-fill" id="lw-stress-bar" style="width:0%;background:#10b981"></div></div>
+      </div>
+      <div class="lw-m">
+        <div class="lw-label">Next Dip</div>
+        <div class="lw-val" id="lw-dip" style="color:#f0b429;font-size:1rem">—</div>
+        <div class="lw-bar"><div class="lw-fill" style="width:55%;background:#f0b429"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RIGHT PANEL -->
+<div class="right">
+  <div class="form-header">
+    <div class="form-title" id="formTitle">Welcome back 👋</div>
+    <div class="form-sub" id="formSub">Sign in to your NeuroWeather dashboard</div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" id="tabLogin" onclick="switchTab('login')">Sign In</button>
+    <button class="tab" id="tabSignup" onclick="switchTab('signup')">Create Account</button>
+  </div>
+
+  <div class="msg" id="msgBox"></div>
+
+  <!-- LOGIN FORM -->
+  <div class="form-box" id="loginForm">
+    <div class="field">
+      <label>Email Address</label>
+      <input type="email" id="loginEmail" placeholder="you@company.com" autocomplete="email">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <div class="pw-wrap">
+        <input type="password" id="loginPassword" placeholder="Your password" autocomplete="current-password">
+        <button class="pw-toggle" onclick="togglePw('loginPassword', this)" type="button">👁</button>
+      </div>
+    </div>
+    <a class="forgot" onclick="forgotPassword()">Forgot password?</a>
+    <button class="btn-submit" id="loginBtn" onclick="handleLogin()">
+      <span class="btn-text">Sign In →</span>
+      <span class="btn-loading">Signing in...</span>
+    </button>
+    <div class="divider">or</div>
+    <a href="demo.html" class="btn-demo">🎮 Try Free Demo — No Account Needed</a>
+    <div class="form-foot">
+      Don't have an account?
+      <a onclick="switchTab('signup')" style="cursor:pointer">Create one free →</a>
+    </div>
+  </div>
+
+  <!-- SIGNUP FORM -->
+  <div class="form-box" id="signupForm" style="display:none">
+
+    <div class="plan-badge" id="planBadge">
+      <span class="plan-badge-icon">📦</span>
+      <span class="plan-badge-text">Creating account on <strong id="selectedPlanName">Free Demo</strong> plan</span>
+      <a class="plan-change" href="pricing.html">Change plan</a>
+    </div>
+
+    <div class="field">
+      <label>Full Name</label>
+      <input type="text" id="signupName" placeholder="Your full name" autocomplete="name">
+    </div>
+    <div class="field">
+      <label>Email Address</label>
+      <input type="email" id="signupEmail" placeholder="you@company.com" autocomplete="email">
+    </div>
+    <div class="field">
+      <label>Organization / University / Hospital</label>
+      <input type="text" id="signupOrg" placeholder="e.g. Acme Corp, MIT, City Hospital">
+    </div>
+
+    <div class="field">
+      <label>Your Role</label>
+      <div class="role-select">
+        <div class="role-opt selected" id="roleUser" onclick="selectRole('user')">
+          <span class="role-opt-icon">👤</span>
+          <div class="role-opt-label">Team Member</div>
+          <div class="role-opt-sub">Personal forecast</div>
+        </div>
+        <div class="role-opt" id="roleLeader" onclick="selectRole('leader')">
+          <span class="role-opt-icon">👔</span>
+          <div class="role-opt-label">Leader / Manager</div>
+          <div class="role-opt-sub">Team dashboard</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Password</label>
+      <div class="pw-wrap">
+        <input type="password" id="signupPassword" placeholder="Min. 8 characters"
+          autocomplete="new-password" oninput="checkStrength(this.value)">
+        <button class="pw-toggle" onclick="togglePw('signupPassword', this)" type="button">👁</button>
+      </div>
+      <div class="pw-strength" id="pwStrength">
+        <div class="pw-bar" id="ps1"></div>
+        <div class="pw-bar" id="ps2"></div>
+        <div class="pw-bar" id="ps3"></div>
+        <div class="pw-bar" id="ps4"></div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Confirm Password</label>
+      <div class="pw-wrap">
+        <input type="password" id="signupConfirm" placeholder="Repeat password" autocomplete="new-password">
+        <button class="pw-toggle" onclick="togglePw('signupConfirm', this)" type="button">👁</button>
+      </div>
+    </div>
+
+    <button class="btn-submit" id="signupBtn" onclick="handleSignup()">
+      <span class="btn-text">Create My Account →</span>
+      <span class="btn-loading">Creating account...</span>
+    </button>
+
+    <div class="divider">or</div>
+    <a href="demo.html" class="btn-demo">🎮 Try Free Demo First</a>
+
+    <div class="form-foot">
+      By signing up you agree to our
+      <a href="#">Terms of Service</a> &amp; <a href="#">Privacy Policy</a>.<br>
+      Already have an account? <a onclick="switchTab('login')" style="cursor:pointer">Sign in →</a>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Init Supabase ──────────────────────────────────────────
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ── Live widget (time-based cognition) ─────────────────────
+(function(){
+  const h = new Date().getHours(), m = new Date().getMinutes(), t = h + m/60;
+  let f = t<8?45:t<10?68+(t-8)*8:t<12?82+(t-10)*4:t<13.5?88-(t-12)*10:t<15?70-(t-13.5)*12:t<17?50+(t-15)*8:64-(t-17)*5;
+  let s = t<8?20:t<10?22:t<12?18:t<13.5?25:t<15?35:28;
+  f = Math.max(25, Math.min(97, Math.round(f)));
+  s = Math.max(8,  Math.min(70, Math.round(s)));
+  const dip = t < 14 ? '2:30p' : 'Tmrw';
+  setTimeout(()=>{
+    document.getElementById('lw-focus').textContent = f + '%';
+    document.getElementById('lw-stress').textContent = s < 25 ? 'Low' : s < 45 ? 'Mid' : 'High';
+    document.getElementById('lw-dip').textContent = dip;
+    document.getElementById('lw-focus-bar').style.width = f + '%';
+    document.getElementById('lw-stress-bar').style.width = s + '%';
+  }, 600);
+})();
+
+// ── Check URL param for plan ───────────────────────────────
+const urlParams = new URLSearchParams(window.location.search);
+const planParam = urlParams.get('plan');
+const planNames = { demo:'Free Demo', individual:'Individual ($9/mo)', team:'Team ($49/mo)', enterprise:'Enterprise ($199/mo)' };
+if (planParam && planNames[planParam]) {
+  document.getElementById('selectedPlanName').textContent = planNames[planParam];
+  switchTab('signup');
+}
+
+// ── Tab switch ─────────────────────────────────────────────
+function switchTab(tab) {
+  const isLogin = tab === 'login';
+  document.getElementById('loginForm').style.display  = isLogin ? 'block' : 'none';
+  document.getElementById('signupForm').style.display = isLogin ? 'none'  : 'block';
+  document.getElementById('tabLogin').classList.toggle('active', isLogin);
+  document.getElementById('tabSignup').classList.toggle('active', !isLogin);
+  document.getElementById('formTitle').textContent = isLogin ? 'Welcome back 👋' : 'Create your account';
+  document.getElementById('formSub').textContent   = isLogin
+    ? 'Sign in to your NeuroWeather dashboard'
+    : 'Join NeuroWeather — start your cognitive journey';
+  clearMsg();
+}
+
+// ── Role selection ─────────────────────────────────────────
+let selectedRole = 'user';
+function selectRole(r) {
+  selectedRole = r;
+  document.getElementById('roleUser').classList.toggle('selected', r === 'user');
+  document.getElementById('roleLeader').classList.toggle('selected', r === 'leader');
+}
+
+// ── Password visibility ────────────────────────────────────
+function togglePw(id, btn) {
+  const inp = document.getElementById(id);
+  const show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  btn.textContent = show ? '🙈' : '👁';
+}
+
+// ── Password strength ──────────────────────────────────────
+function checkStrength(pw) {
+  const bars = ['ps1','ps2','ps3','ps4'];
+  bars.forEach(b => { document.getElementById(b).className = 'pw-bar'; });
+  if (!pw) return;
+  let score = 0;
+  if (pw.length >= 8)  score++;
+  if (/[A-Z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  const cls = ['weak','fair','good','strong'][score-1] || 'weak';
+  for (let i = 0; i < score; i++) document.getElementById(bars[i]).classList.add(cls);
+}
+
+// ── Message helpers ────────────────────────────────────────
+function showMsg(text, type) {
+  const el = document.getElementById('msgBox');
+  el.textContent = text;
+  el.className = `msg ${type} show`;
+}
+function clearMsg() {
+  const el = document.getElementById('msgBox');
+  el.className = 'msg';
+}
+
+function setLoading(btnId, loading) {
+  const btn = document.getElementById(btnId);
+  btn.disabled = loading;
+  btn.querySelector('.btn-text').style.display    = loading ? 'none'   : 'inline';
+  btn.querySelector('.btn-loading').style.display = loading ? 'inline' : 'none';
+}
+
+// ── LOGIN ──────────────────────────────────────────────────
+async function handleLogin() {
+  clearMsg();
+  const email    = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+
+  if (!email || !password) { showMsg('Please fill in all fields.', 'error'); return; }
+
+  setLoading('loginBtn', true);
+
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      showMsg(error.message === 'Invalid login credentials'
+        ? '❌ Wrong email or password. Please try again.'
+        : '❌ ' + error.message, 'error');
+      setLoading('loginBtn', false);
+      return;
+    }
+
+    // Fetch user profile to get role
+    const { data: profile } = await sb
+      .from('profiles')
+      .select('role, plan, plan_expires_at, full_name')
+      .eq('id', data.user.id)
+      .single();
+
+    showMsg('✅ Signed in! Redirecting...', 'success');
+
+    setTimeout(() => {
+      // Check plan expiry
+      if (profile?.plan === 'demo' || !profile?.plan) {
+        window.location.href = 'demo.html';
+      } else if (profile?.role === 'leader') {
+        window.location.href = 'dashboard.html?view=leader';
+      } else {
+        window.location.href = 'dashboard.html?view=user';
+      }
+    }, 1000);
+
+  } catch (e) {
+    showMsg('❌ Something went wrong. Please try again.', 'error');
+    setLoading('loginBtn', false);
+  }
+}
+
+// ── SIGNUP ─────────────────────────────────────────────────
+async function handleSignup() {
+  clearMsg();
+  const name     = document.getElementById('signupName').value.trim();
+  const email    = document.getElementById('signupEmail').value.trim();
+  const org      = document.getElementById('signupOrg').value.trim();
+  const password = document.getElementById('signupPassword').value;
+  const confirm  = document.getElementById('signupConfirm').value;
+  const plan     = planParam || 'demo';
+
+  if (!name || !email || !password || !confirm) {
+    showMsg('❌ Please fill in all required fields.', 'error'); return;
+  }
+  if (password.length < 8) {
+    showMsg('❌ Password must be at least 8 characters.', 'error'); return;
+  }
+  if (password !== confirm) {
+    showMsg('❌ Passwords do not match.', 'error'); return;
+  }
+
+  setLoading('signupBtn', true);
+
+  try {
+    // 1. Create auth user
+    const { data, error } = await sb.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { full_name: name, role: selectedRole, organization: org, plan }
+      }
+    });
+
+    if (error) {
+      showMsg('❌ ' + error.message, 'error');
+      setLoading('signupBtn', false);
+      return;
+    }
+
+    // 2. Insert profile row (also handled by DB trigger — this is a fallback)
+    if (data.user) {
+      await sb.from('profiles').upsert({
+        id:               data.user.id,
+        full_name:        name,
+        email:            email,
+        organization:     org,
+        role:             selectedRole,
+        plan:             plan,
+        plan_expires_at:  plan === 'demo'
+          ? new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString()
+          : null,
+      });
+    }
+
+    showMsg('✅ Account created! Check your email to confirm, then sign in.', 'success');
+
+    // If paid plan — redirect to pricing/Stripe
+    if (plan !== 'demo') {
+      setTimeout(() => { window.location.href = `pricing.html?plan=${plan}&checkout=1`; }, 1800);
+    } else {
+      setTimeout(() => { switchTab('login'); }, 2000);
+    }
+
+  } catch(e) {
+    showMsg('❌ Something went wrong. Please try again.', 'error');
+    setLoading('signupBtn', false);
+  }
+}
+
+// ── FORGOT PASSWORD ────────────────────────────────────────
+async function forgotPassword() {
+  const email = document.getElementById('loginEmail').value.trim();
+  if (!email) { showMsg('Enter your email address first, then click Forgot password.', 'error'); return; }
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + '/login.html'
+  });
+  if (error) { showMsg('❌ ' + error.message, 'error'); }
+  else { showMsg('✅ Password reset email sent! Check your inbox.', 'success'); }
+}
+
+// ── Auto-redirect if already logged in ────────────────────
+(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    const { data: profile } = await sb
+      .from('profiles').select('role').eq('id', session.user.id).single();
+    window.location.href = profile?.role === 'leader'
+      ? 'dashboard.html?view=leader'
+      : 'dashboard.html?view=user';
+  }
+})();
+
+// ── Enter key support ──────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const loginVisible = document.getElementById('loginForm').style.display !== 'none';
+    if (loginVisible) handleLogin();
+    else handleSignup();
+  }
+});
+</script>
+</body>
+</html>
