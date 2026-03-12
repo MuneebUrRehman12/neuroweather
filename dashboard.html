@@ -297,32 +297,70 @@ body{background:var(--ink);color:var(--text);font-family:'DM Sans',sans-serif;
   .mob-nav{display:block}
   .mob-view-row{display:flex}
   .main{padding:1rem;padding-bottom:5.5rem}
-  .app-body{overflow-y:auto}
+  .app-body{overflow-y:auto;height:calc(100vh - 54px)}
   .topbar{padding:0 1rem;height:50px}
   .tb-logo{font-size:0.95rem}
   .ai-badge{display:none}
   .tb-user span{display:none}
-  .tb-signout{font-size:0.7rem;padding:0.3rem 0.6rem}
-  .plan-chip{font-size:0.55rem;padding:0.15rem 0.45rem}
-  .card{padding:1rem}
-  .card-title{font-size:0.6rem}
+  .tb-signout{font-size:0.68rem;padding:0.28rem 0.55rem}
+  .plan-chip{font-size:0.52rem;padding:0.12rem 0.42rem}
+  .card{padding:1rem;border-radius:13px}
+  .card-title{font-size:0.59rem}
   .kpi-grid{grid-template-columns:1fr 1fr}
-  .modal{padding:1.5rem 1.2rem;margin:1rem}
-  .modal h3{font-size:1rem}
+  .kpi-card{padding:1rem}
+  .kpi-val{font-size:1.6rem}
+  .modal{padding:1.4rem 1.2rem;margin:1rem;border-radius:16px}
+  .modal h3{font-size:0.95rem}
+  .modal-field label{font-size:0.75rem}
+  .greeting-h{font-size:1rem}
+  .greeting-s{font-size:0.75rem}
+  .ring-svg{width:86px;height:86px}
+  .ring-num{font-size:1.35rem}
+  .score-state{font-size:0.85rem}
+  .score-sub{font-size:0.65rem}
+  .bar-lbl{font-size:0.68rem}
+  .condition{padding:0.85rem}
+  .cond-icon{font-size:1.6rem}
+  .cond-title{font-size:0.85rem}
+  .cond-body{font-size:0.7rem}
+  .ai-box{padding:0.85rem}
+  .ai-hdr{font-size:0.58rem}
+  .ai-text{font-size:0.78rem}
 }
 
 @media(max-width:480px){
   .g3,.g4,.g2,.kpi-grid{grid-template-columns:1fr}
   .gc2{grid-column:span 1}
   .topbar{padding:0 0.8rem}
-  .tb-logo em{display:inline}
   .main{padding:0.85rem;padding-bottom:5.5rem}
-  .slot{flex-direction:column;align-items:flex-start;gap:0.5rem}
-  .slot-time{width:auto}
-  .ring-svg{width:80px;height:80px}
-  .ring-num{font-size:1.3rem}
-  .upsell{flex-direction:column;text-align:center}
-  .upsell-btn{align-self:center}
+  .slot{flex-wrap:wrap;gap:0.4rem}
+  .slot-time{width:auto;font-size:0.8rem}
+  .slot-title{font-size:0.76rem}
+  .slot-sub{font-size:0.64rem}
+  .slot-badge{font-size:0.55rem;padding:0.12rem 0.42rem}
+  .ring-svg{width:76px;height:76px}
+  .ring-num{font-size:1.2rem}
+  .kpi-val{font-size:1.4rem}
+  .kpi-label{font-size:0.58rem}
+  .upsell{flex-direction:column;text-align:center;padding:1rem}
+  .upsell-ico{font-size:1.7rem}
+  .upsell-title{font-size:0.85rem}
+  .upsell-sub{font-size:0.72rem}
+  .upsell-btn{align-self:center;font-size:0.72rem}
+  .upgrade-banner{font-size:0.72rem;padding:0.5rem 0.9rem}
+  .week-bar-wrap{gap:2px}
+  .tl{gap:2px;height:46px}
+  .mob-nav-btn{min-width:44px;padding:0.25rem 0.4rem}
+  .mob-nav-btn .mni{font-size:1.15rem}
+  .mob-nav-btn .mnl{font-size:0.5rem}
+}
+
+@media(max-width:360px){
+  .topbar{padding:0 0.6rem}
+  .tb-logo{font-size:0.85rem}
+  .tb-signout{display:none}
+  .main{padding:0.7rem;padding-bottom:5rem}
+  .card{padding:0.85rem}
 }
 </style>
 </head>
